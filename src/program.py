@@ -11,6 +11,8 @@ import re
 import sys
 
 
+
+
 def getTitle(raw):
     for t in ('Dr', 'Dr.', 'Mr', 'Mr.', 'Prof', 'Prof.', 'Lt Col'):
         if raw.startswith(t+' '):
@@ -22,32 +24,67 @@ class Author:
     _decode = re.compile(
         r'(?:(?:"([^"]+)")|(\S+))\s+([^(]+?)\s*(?:\((\d{4}-\d{4}-\d{4}-\d{4})\))?')
     _authors = dict()
+    _members = ('orcid', 'affiliation', 'email',
+                'picture', 'biography')
     
-    def __new__(cls, raw_name: str):
-        
-        title, raw_name = getTitle(raw_name)
-                
-        res = cls._decode.fullmatch(raw_name.strip())
-        if res:
-            lastname = res.group(3)
-            firstname = res.group(1) or res.group(2)
-            orcid = res.group(4)
-            
-        else:
-            print(f"Cannot decode author first/last: {raw_name}")
-            firstname = ''
-            lastname = raw_name.strip()
-            orcid = None
+    def __new__(cls, *argv, **argkw):
+        if len(argv) == 1 and hasattr(argv[0], 'keys'):
+            return cls._from_dict(argv[0])
+        elif len(argv) == 2:
+            return cls._from_iterable(argv[0], argv[1])
+    
+    @classmethod
+    def _from_parts(cls, firstname, lastname, orcid=None):
         try:
             return cls._authors[(lastname, firstname, orcid)]
         except KeyError:
-            pass
+            if orcid is None:
+
+                # is there an author def with orcid in there?
+                for k, a in cls._authors.items():
+                    if k[:2] == (lastname, firstname):
+                        print(f"Matching {lastname}, {firstname} to orcid={k[2]}",
+                              file=sys.stderr)
+                        return a
+            else:
+
+                # is the name there, but without orcid? Appropriate
+                a = cls._authors.get((lastname, firstname, None), False)
+                if a:
+                    print(f"Matching orcid={orcid} to {lastname}, {firstname}",
+                          file=sys.stderr)
+                    del cls._authors[(lastname, firstname, None)]
+                    cls._authors[(lastname, firstname, orcid)] = a
+                    return a
+
+        # apparently nothing found, create a new author
         obj = super().__new__(cls)
         obj.lastname = lastname
-        obj.fistname = firstname
-        obj.title = title
-        cls._authors[(lastname, firstname, orcid)] = obj
+        obj.firstname = firstname
         return obj
+
+    @classmethod    
+    def _from_dict(cls, data):
+        obj = cls._from_parts(data.get('firstname'), 
+                              data.get('lastname', 'Anonymous'),
+                              data.get('orcid', None))
+        for k, v in data.items():
+            if k != '_authors':
+                setattr(obj, k, v)
+        return obj
+        
+    @classmethod
+    def _from_iterable(cls, index, row):
+        obj = cls._from_string(row[index['author']].value)
+        
+        # these are directly coupled
+        for m in cls._members:
+            setattr(obj, m, row[index[m]].value)
+        
+        # remove the un-orcided one, and install with orcid
+        del cls._authors[(obj.lastname, obj.firstname, None)]
+        cls._authors[(obj.lastname, obj.firstname, obj.orcid)] = obj
+        
         
     def __str__(self):
         return f'{self.lastname}, {self.firstname}'
@@ -72,7 +109,7 @@ class Author:
 
 class Item:
     
-    _members = ('key', 'title', 'abstract', 'session')
+    _members = ('item', 'title', 'abstract', 'session')
 
     def __init__(self, index, row):
             
@@ -104,7 +141,7 @@ class TimeSlot:
             slot.events[event.eventid] = event
         except KeyError:
             slot = super().__new__(cls)
-            slot.events = { event.eventid : event }
+            slot.events = { event.event : event }
             slot.start = event.start
             slot.end = event.end
             cls._slots[(event.day, event.start)] = slot
@@ -112,7 +149,7 @@ class TimeSlot:
 
 class Event:
     
-    _members = ('day', 'start', 'end', 'title', 'venue', 'eventid')
+    _members = ('day', 'start', 'end', 'title', 'venue', 'event')
     
     def __init__(self, index, row):
         
@@ -127,7 +164,7 @@ class Event:
 
 class Session:
     
-    _members = ('topic', 'title', 'items', 'session', 'format')
+    _members = ('session', 'title', 'items', 'event', 'format')
     
     def __init__(self, index, row):
         for m in Session._members:
@@ -136,39 +173,60 @@ class Session:
     def __str__(self):
         return str(self.__dict__)
 
-
-def makeIndex(sheet):
-    return dict([(c[0].value, c[0].column-1) for 
+def processSheet(sheet, Object):
+    
+    # result
+    collect = []
+    
+    # read the index from the first row
+    index = dict([(c[0].value, c[0].column-1) for 
                  c in sheet.iter_cols(max_row=1)])
 
+    # process the remaining rows
+    for row in sheet.iter_rows(min_row=2):
+        collect.append(Object(index, row))
+    return collect
+
 class Program:
+    """ Representation of a conference program.
     
+        A conference program can be read from an excel spreadsheet with
+        four tabs:
+            
+            - items: All "items" in the program, a poster presentation, 
+              presentation in a parallel or plenary session, panel session 
+              participation or the like. The column "item" is the identifying
+              key here. Each item links to a session.
+            - sessions: A definition of all sessions, each having an 
+              identifying key in the column session, each session links to
+              an event.
+            - events: Events have a time and venue. The column "event" is the 
+              identifying key
+            - authors: authors are normally assembled from the author_list 
+              in the items tab, but additional information can be given here.
+              
+        The excel spreadsheet is read, processed and linked, so that the
+        program can be generated. This can be used to produce:
+            
+            - A time-ordered program, with all sessions with their contents,
+              printed to html, pdf or the like
+              
+            - A list of events per venue, with a check on overlap
+            
+            - A list of authors, with id's of the events in which they appear
+              and a check on overlap for appearing in parallel sessions
+    """
     def __init__(self, file):
         book = openpyxl.load_workbook(file)
         
         # read the sessions
-        sessions = book['sessions']
-        index = makeIndex(sessions)
-        self.sessions = []
-        for row in sessions.iter_rows(min_row=2):
-            self.sessions.append(Session(index, row))
-            print(self.sessions[-1])
-            
-        # read the events
-        events = book['events']
-        index = makeIndex(events)
-        for row in events.iter_rows(min_row=2):
-            ev = Event(index, row)
-            print(ev)
+        self.authors = processSheet(book['authors'], Author)
+        for a in self.authors:
+            print(a)
         
-        # read the items
-        items = book['items']
-        self.items = []
-        index = makeIndex(items)
-        for row in items.iter_rows(min_row=2):
-          self.items.append(Item(index, row))
-          print(self.items[-1])
-      
+        self.sessions = processSheet(book['sessions'], Session)
+        self.events = processSheet(book['events'], Event)
+        self.items = processSheet(book['items'], Item)     
     
 if __name__ == '__main__':
     
