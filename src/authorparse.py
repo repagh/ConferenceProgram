@@ -6,8 +6,9 @@ Created on Fri Feb 10 10:35:54 2023
 @author: repa
 """
 from pyparsing import oneOf, Word, alphas, OneOrMore, ZeroOrMore, \
-    Literal, Regex, ParserElement, LineEnd, Opt
-from program import Author
+    Literal, Regex, ParserElement, LineEnd, Opt, ParseException
+import re
+import sys
 
 # newlines are significant for parsing multi-line author lists
 ParserElement.setDefaultWhitespaceChars(' \t')
@@ -45,9 +46,11 @@ def completeAuthor(toks):
 
 # parsing tokens and language
 titlepre = oneOf(('Dr', 'Dr.', 'Prof', 'Prof.', 'dr.', 'dr.ir.', 'Lt',
-                  'Lt Col', 'Lt. Col.')).set_parse_action(setTitle)
+                  'Lt Col', 'Lt. Col.', 'Prof. Dr.-Ing.',
+                  'Mr', 'Mr.', 'Mrs.')).set_parse_action(setTitle)
 titlepost = Literal(',') + \
-    oneOf(('MSc', 'MSc.', 'PHD', 'Phd.', 'Ed.D', 'Ph.D.', 'MSC')).set_parse_action(setTitle2)
+    oneOf(('MSc', 'MSc.', 'PHD', 'Phd.', 'Ed.D', 'Ph.D.', 'MSC',
+           'MS')).set_parse_action(setTitle2)
 firstname = (Word(unicodePrintables, asKeyword=True) + 
              ZeroOrMore(Regex(r'[A-Z]\.'))).set_parse_action(setFirst)
 nickname = (Literal('(') + Word(unicodePrintables, asKeyword=True) + 
@@ -75,10 +78,103 @@ author_line = (author + Opt(Literal(',') +
 author_lines = author_line + OneOrMore(LineEnd() + author_line)
 author_list = author + ZeroOrMore(separator + author) 
 
+class Author:
+    
+    _decode = re.compile(
+        r'(?:(?:"([^"]+)")|(\S+))\s+([^(]+?)\s*(?:\((\d{4}-\d{4}-\d{4}-\d{4})\))?')
+    _authors = dict()
+    _members = ('orcid', 'affiliation', 'email',
+                'picture', 'biography')
+    
+    def __new__(cls, *argv, **argkw):
+        if len(argv) == 1 and hasattr(argv[0], 'keys'):
+            return cls._from_dict(argv[0])
+        elif len(argv) == 2:
+            return cls._from_iterable(argv[0], argv[1])
+        raise ValueError(f"Cannot make author from {argv}")
+        
+    @classmethod
+    def _from_parts(cls, firstname, lastname, orcid=None):
+        try:
+            return cls._authors[(lastname, firstname, orcid)]
+        except KeyError:
+            if orcid is None:
+
+                # is there an author def with orcid in there?
+                for k, a in cls._authors.items():
+                    if k[:2] == (lastname, firstname):
+                        print(f"Matching {lastname}, {firstname} to orcid={k[2]}",
+                              file=sys.stderr)
+                        return a
+            else:
+
+                # is the name there, but without orcid? Appropriate
+                a = cls._authors.get((lastname, firstname, None), False)
+                if a:
+                    print(f"Matching orcid={orcid} to {lastname}, {firstname}",
+                          file=sys.stderr)
+                    del cls._authors[(lastname, firstname, None)]
+                    cls._authors[(lastname, firstname, orcid)] = a
+                    return a
+
+        # apparently nothing found, create a new author
+        obj = super().__new__(cls)
+        obj.lastname = lastname
+        obj.firstname = firstname
+        return obj
+
+    @classmethod    
+    def _from_dict(cls, data):
+        obj = cls._from_parts(data.get('firstname'), 
+                              data.get('lastname', 'Anonymous'),
+                              data.get('orcid', None))
+        for k, v in data.items():
+            if k != '_authors':
+                setattr(obj, k, v)
+        return obj
+        
+    @classmethod
+    def _from_iterable(cls, index, row):
+        obj = SingleAuthor(row[index['author']].value)[0]
+        
+        # these are directly coupled
+        for m in cls._members:
+            setattr(obj, m, row[index[m]].value)
+        
+        # if applicable, remove the un-orcided one, and install with orcid
+        if obj.orcid:
+            try:
+                del cls._authors[(obj.lastname, obj.firstname, None)]
+                print(f"Adding orcid to author {str(obj)}")
+            except KeyError:
+                pass
+        cls._authors[(obj.lastname, obj.firstname, obj.orcid)] = obj
+        
+        
+    def __str__(self):
+        return f'{self.lastname}, {self.firstname}'
+
+    @classmethod
+    def find(cls, **kw):
+        try:
+            return cls._authors((kw['lastname'], kw['firstname'], 
+                                 kw.get('orcid', None)))
+        except KeyError:
+            pass
+        try:
+            for k, o in cls._authors.items():
+                if k[2] == kw['orcid']:
+                    return o
+        except KeyError:
+            raise KeyError("Wrong arguments to find author")
+        raise KeyError(f"Cannot find author from {kw}")
+
+
 class AuthorList(list):
     
     def __init__(self, text):
-        if '\n' in test:
+        text = text.strip()
+        if '\n' in text:
             al = author_line.copy().set_parse_action(self.complete)
             parser = al + OneOrMore(LineEnd() + al)
         else:
@@ -87,15 +183,18 @@ class AuthorList(list):
         parser.parseString(text)
         
     def complete(self, toks):
-        print(f"list addition {dict(toks.items())}")
+        dprint(f"list addition {dict(toks.items())}")
         self.append(Author(toks))
         
 class SingleAuthor(list):
     
     def __init__(self, text):
         parser = author_line.copy().set_parse_action(self.complete)
-        parser.parseString(text)
-        
+        try:
+            parser.parseString(text.strip())
+        except ParseException:
+            raise ParseException(f"Cannot read single author from {text}")
+            
     def complete(self, toks):
         self.append(Author(toks))
         
@@ -124,6 +223,7 @@ if __name__ == '__main__':
     for test in (
         'Hannah Rennich, Dr. Michael Miller, Dr. John McGuirl, Dr. Timothy Fry',
         'Michael Vidulich & Pamela Tsang',
+        'Nejc Sedlar, Dr Amy Irwin, Prof Amelia Hunt',
         'Samantha N. Emerson, Maria Chaparro Osman, Cait Rizzardo, Kent C. Halverson, Steve Ellis, Don Haley',
         'Lynne Martin, Lauren Roberts, Joey Mercer, Yasmin Arbab, Charles Walter, William McCarty, Charles Sheehe III',
         'Ivo Stuldreher, Erik Van der Burg, Wietse Ledegang, Mark Houben, Yvonne Fonken & Eric Groen',

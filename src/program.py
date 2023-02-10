@@ -9,110 +9,21 @@ Created on Thu Feb  9 10:40:39 2023
 import openpyxl
 import re
 import sys
-
-
-
-
-def getTitle(raw):
-    for t in ('Dr', 'Dr.', 'Mr', 'Mr.', 'Prof', 'Prof.', 'Lt Col'):
-        if raw.startswith(t+' '):
-            return t, raw[len(t):]
-    return '', raw
-
-class Author:
-    
-    _decode = re.compile(
-        r'(?:(?:"([^"]+)")|(\S+))\s+([^(]+?)\s*(?:\((\d{4}-\d{4}-\d{4}-\d{4})\))?')
-    _authors = dict()
-    _members = ('orcid', 'affiliation', 'email',
-                'picture', 'biography')
-    
-    def __new__(cls, *argv, **argkw):
-        if len(argv) == 1 and hasattr(argv[0], 'keys'):
-            return cls._from_dict(argv[0])
-        elif len(argv) == 2:
-            return cls._from_iterable(argv[0], argv[1])
-    
-    @classmethod
-    def _from_parts(cls, firstname, lastname, orcid=None):
-        try:
-            return cls._authors[(lastname, firstname, orcid)]
-        except KeyError:
-            if orcid is None:
-
-                # is there an author def with orcid in there?
-                for k, a in cls._authors.items():
-                    if k[:2] == (lastname, firstname):
-                        print(f"Matching {lastname}, {firstname} to orcid={k[2]}",
-                              file=sys.stderr)
-                        return a
-            else:
-
-                # is the name there, but without orcid? Appropriate
-                a = cls._authors.get((lastname, firstname, None), False)
-                if a:
-                    print(f"Matching orcid={orcid} to {lastname}, {firstname}",
-                          file=sys.stderr)
-                    del cls._authors[(lastname, firstname, None)]
-                    cls._authors[(lastname, firstname, orcid)] = a
-                    return a
-
-        # apparently nothing found, create a new author
-        obj = super().__new__(cls)
-        obj.lastname = lastname
-        obj.firstname = firstname
-        return obj
-
-    @classmethod    
-    def _from_dict(cls, data):
-        obj = cls._from_parts(data.get('firstname'), 
-                              data.get('lastname', 'Anonymous'),
-                              data.get('orcid', None))
-        for k, v in data.items():
-            if k != '_authors':
-                setattr(obj, k, v)
-        return obj
-        
-    @classmethod
-    def _from_iterable(cls, index, row):
-        obj = cls._from_string(row[index['author']].value)
-        
-        # these are directly coupled
-        for m in cls._members:
-            setattr(obj, m, row[index[m]].value)
-        
-        # remove the un-orcided one, and install with orcid
-        del cls._authors[(obj.lastname, obj.firstname, None)]
-        cls._authors[(obj.lastname, obj.firstname, obj.orcid)] = obj
-        
-        
-    def __str__(self):
-        return f'{self.lastname}, {self.firstname}'
-
-    @classmethod
-    def find(cls, **kw):
-        try:
-            return cls._authors((kw['lastname'], kw['firstname'], 
-                                 kw.get('orcid', None)))
-        except KeyError:
-            pass
-        try:
-            for k, o in cls._authors.items():
-                if k[2] == kw['orcid']:
-                    return o
-        except KeyError:
-            raise KeyError("Wrong arguments to find author")
-        raise KeyError(f"Cannot find author from {kw}")
-        
-    def complete(self, sheet):
-        pass
+from authorparse import Author, AuthorList, SingleAuthor
 
 class Item:
     
     _members = ('item', 'title', 'abstract', 'session')
-
+    _required = ('author_list', 'item', 'title')
+    
     def __init__(self, index, row):
             
+        # check the minimum is there
+        for m in Item._required:
+            if row[index[m]].value is None or not str(row[index[m]].value).strip():
+                raise ValueError(
+                    f"No data in cell {row[index[m]].coordinate}, skipping row")
+        
         # these are directly coupled
         for m in Item._members:
             setattr(self, m, row[index[m]].value)
@@ -120,11 +31,10 @@ class Item:
         # this becomes a list, note authors are unique!
         print(row[index['author_list']].value)
         try:
-            self.authors = [
-                Author(a) for a in row[index['author_list']].value.split(',')]
+            self.authors = list(AuthorList(row[index['author_list']].value))
         except:
             print(f"Cannot get authors from {row[index['author_list']].value}")
-            self.authors = [Author('Anonymous')]
+            self.authors = [Author(dict(firstname='', lastname='Anonymous'))]
 
     def __str__(self):
         return str(self.__dict__)
@@ -184,7 +94,11 @@ def processSheet(sheet, Object):
 
     # process the remaining rows
     for row in sheet.iter_rows(min_row=2):
-        collect.append(Object(index, row))
+        try:
+            collect.append(Object(index, row))
+        except ValueError as e:
+            print(f"Creating {Object.__name__}, cannot run row, {e}")
+            
     return collect
 
 class Program:
