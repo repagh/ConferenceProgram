@@ -30,16 +30,6 @@ class Item:
             if v is not None and v.strip() == '': v = None
             setattr(self, m, v)
             
-        # this becomes a list, note authors are unique!
-        # print(row[index['author_list']].value)
-        try:
-            self.authors = list(AuthorList(row[index['author_list']].value, 
-                                           program))
-        except:
-            print(f"Cannot get authors from {row[index['author_list']].value}")
-            self.authors = [Author(dict(firstname='', lastname='Anonymous'), 
-                                   program)]
-
         # link to the session if available
         try:
             self._session = program.sessions[self.session]
@@ -48,6 +38,19 @@ class Item:
         except:
             raise ValueError(f"Item: cannot find session {self.session}")
 
+        # find, if needed create the authors.
+        try:
+            self.authors = list(AuthorList(row[index['author_list']].value, 
+                                           program))
+        except:
+            print(f"Cannot get authors from {row[index['author_list']].value}")
+            self.authors = [Author(dict(firstname='', lastname='Anonymous'), 
+                                   program)]
+
+        # session link is ok, now add the authors
+        for a in self.authors:
+            a._items.append(self)
+            
     def __str__(self):
         return str(self.__dict__)
 
@@ -221,50 +224,8 @@ class Program:
     
 if __name__ == '__main__':
     
-    def testem(dec):
-        print(f"testing {dec}")
-        txt = """John Doe
-John Doe (0000-1234-0000-0000)
-"John" Doe
-"John A." Doe
-Jane Burke Cohen
-Jane-Jet Cohen
-"John A." Doe (0000-1234-0000-0000)"""
-        for t in txt.split('\n'):
-            try:
-                res = dec.fullmatch(t)
-                print(res.groups())
-            except:
-                print(f"Cannot decode {t}")
-    """
-    # captures simple, first name + rest
-    dec0 = re.compile(r'(\S+)\s+(.+)')
-    testem(dec0)
-    
-    # captures quoted first name in #2, simple first name in #3, last name #4
-    dec1 = re.compile(r'(("([^"]+)")|(\S+))\s+(.+)')
-    testem(dec1)
-    
-    # do not capture orcid opening brackets
-    dec2 = re.compile(r'(("([^"]+)")|(\S+))\s+([^(]+)')
-    testem(dec2)
-    
-    # do the optional orcid decode
-    dec3 = re.compile(r'(?:(?:"([^"]+)")|(\S+))\s+([^(]+?)\s*(?:\((\d{4}-\d{4}-\d{4}-\d{4})\))?')
-    testem(dec3)
-    """
-    """
-    book = openpyxl.load_workbook('../../../TUDelft/community/ISAP2023/collated_abstracts.xlsx')
-    
-    sessions = book['sessions']
-    index = dict( [ (c[0].value, c[0].column) for 
-                           c in sessions.iter_cols(min_row=1, max_row=1)] )
-    print(index)
-    for row in sessions.iter_rows(min_row=2):
-        print(row)
-    """
     pr = Program('../../../TUDelft/community/ISAP2023/collated_abstracts.xlsx')
     kl = sorted(pr.authors.keys(), key=lambda s: s[0].casefold())
     for ak in kl:
-        print(ak)
+        print(ak, pr.authors[ak]._items)
     

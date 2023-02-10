@@ -129,7 +129,7 @@ class Author:
         obj.lastname = lastname
         obj.firstname = firstname
         obj.orcid = orcid
-        obj._events = []
+        obj._items = []
         program.authors[obj.key()] = obj
         return obj
 
