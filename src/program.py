@@ -7,16 +7,16 @@ Created on Thu Feb  9 10:40:39 2023
 """
 
 import openpyxl
+from authorparse import Author, AuthorList
+from datetime import date, time, timedelta, datetime
 import re
-import sys
-from authorparse import Author, AuthorList, SingleAuthor
 
 class Item:
     
     _members = ('item', 'title', 'abstract', 'session')
-    _required = ('author_list', 'item', 'title')
+    _required = ('author_list', 'item', 'title', 'session')
     
-    def __init__(self, index, row):
+    def __init__(self, index, row, program):
             
         # check the minimum is there
         for m in Item._required:
@@ -24,69 +24,130 @@ class Item:
                 raise ValueError(
                     f"No data in cell {row[index[m]].coordinate}, skipping row")
         
-        # these are directly coupled
+        # these are directly coupled, make empty string cells void
         for m in Item._members:
-            setattr(self, m, row[index[m]].value)
+            v = str(row[index[m]].value)
+            if v is not None and v.strip() == '': v = None
+            setattr(self, m, v)
             
         # this becomes a list, note authors are unique!
-        print(row[index['author_list']].value)
+        # print(row[index['author_list']].value)
         try:
-            self.authors = list(AuthorList(row[index['author_list']].value))
+            self.authors = list(AuthorList(row[index['author_list']].value, 
+                                           program))
         except:
             print(f"Cannot get authors from {row[index['author_list']].value}")
-            self.authors = [Author(dict(firstname='', lastname='Anonymous'))]
+            self.authors = [Author(dict(firstname='', lastname='Anonymous'), 
+                                   program)]
+
+        # link to the session if available
+        try:
+            self._session = program.sessions[self.session]
+            self._session._items.append(self)
+        
+        except:
+            raise ValueError(f"Item: cannot find session {self.session}")
 
     def __str__(self):
         return str(self.__dict__)
 
-class TimeSlot:
-    
-    _slots = dict()
+    def key(self):
+        return self.item
 
-    def __new__(cls, event):
+class TimeSlot:
+
+    def __new__(cls, event, program):
         try:
-            slot = cls._slots[event.start]
+            slot = program.slots[event.start]
             slot.start = event.start
             slot.end = max(slot.end, event.end)
-            slot.events[event.eventid] = event
+            slot.events[event.event] = event
         except KeyError:
             slot = super().__new__(cls)
             slot.events = { event.event : event }
             slot.start = event.start
             slot.end = event.end
-            cls._slots[(event.day, event.start)] = slot
+            program.slots[event.start] = slot
         return slot
+    
+    def key(self):
+        return self.start
 
+
+_timeparse = re.compile('([0-9]{1,2}):([0-9]{2})\s?(AM|PM)?')
+
+def makeTime(day, t):
+    if isinstance(t, datetime):
+        return t
+    
+    res = _timeparse.match(t)
+    h, m = int(res.group(1)), int(res.group(2))
+               
+    if res.group(3) == 'PM' and h != 12:
+        h = h + 12
+    elif res.group(3) == 'AM' and h == 12:
+        h = 0
+    elif res.group(3) not in ('AM', 'PM', 'am', 'pm', None):
+        raise ValueError("Indicate AM, PM or nothing")
+    
+    return datetime.combine(day, time(h, m))
+
+        
 class Event:
     
     _members = ('day', 'start', 'end', 'title', 'venue', 'event')
     
-    def __init__(self, index, row):
+    def __init__(self, index, row, program):
         
         # directly coupled/read
         for m in Event._members:
             setattr(self, m, row[index[m]].value)
-            
+        
+        # fix the start if needed
+        try:
+            self.start = makeTime(self.day, self.start)
+            self.end = makeTime(self.day, self.start)
+        except Exception as e:
+            rs, re = row[index['start']].coordinate, row[index['end']].coordinate
+            raise ValueError(f"Cannot convert event times in {rs} and/or {re}: {e}")
+        
         # claim/insert the time slot
-        TimeSlot(self)
+        TimeSlot(self, program)
+        
     def __str__(self):
         return str(self.__dict__)
+
+    def key(self):
+        return self.event
 
 class Session:
     
     _members = ('session', 'title', 'items', 'event', 'format')
     
-    def __init__(self, index, row):
+    def __init__(self, index, row, program):
         for m in Session._members:
             setattr(self, m, row[index[m]].value)
+            
+        # find the corresponding event
+        try:
+            event = program.events[self.event]
+            self._event = event
+            event._session = self
+        except KeyError:
+            raise KeyError(f"Cannot find event {self.event} for session {self.session}"
+                           f", check {row[index['event']].coordinate}")
+        self._items = []
             
     def __str__(self):
         return str(self.__dict__)
 
-def processSheet(sheet, Object):
+    def key(self):
+        return self.session
+
+def processSheet(sheet, Object, program=None):
     
     # result
-    collect = []
+    collect = dict()
     
     # read the index from the first row
     index = dict([(c[0].value, c[0].column-1) for 
@@ -95,7 +156,8 @@ def processSheet(sheet, Object):
     # process the remaining rows
     for row in sheet.iter_rows(min_row=2):
         try:
-            collect.append(Object(index, row))
+            o = Object(index, row, program)
+            collect[o.key()] = o
         except ValueError as e:
             print(f"Creating {Object.__name__}, cannot run row, {e}")
             
@@ -132,15 +194,30 @@ class Program:
     """
     def __init__(self, file):
         book = openpyxl.load_workbook(file)
+        self.book = book
         
-        # read the sessions
-        self.authors = processSheet(book['authors'], Author)
-        for a in self.authors:
-            print(a)
+        # prepare for filling        
+        self.authors = dict()
+        self.slots = dict()
+      
+        # events dict is returned by the call, sorted by event id
+        # this also fills the slots, keyed by slot start time
+        self.events = processSheet(book['events'], Event, self)
+
+        # the sessions dict is returned by the processSheet call
+        # a session is linked to an event, and thereby to a time slot
+        self.sessions = processSheet(book['sessions'], Session, self)
         
-        self.sessions = processSheet(book['sessions'], Session)
-        self.events = processSheet(book['events'], Event)
-        self.items = processSheet(book['items'], Item)     
+        # the items are linked to a session; they will be added to 
+        # the list of items there
+        self.items = processSheet(book['items'], Item, self)     
+
+        # read the full definitions from the authors tab for authors with
+        # further details
+        #
+        # this may also further fill the authors dict
+        processSheet(book['authors'], Author, self)
+
     
 if __name__ == '__main__':
     
@@ -186,4 +263,8 @@ Jane-Jet Cohen
     for row in sessions.iter_rows(min_row=2):
         print(row)
     """
-    pr = Program('../../../TUDelft/community/ISAP2023/collated_abstracts.xlsx')    
+    pr = Program('../../../TUDelft/community/ISAP2023/collated_abstracts.xlsx')
+    kl = sorted(pr.authors.keys(), key=lambda s: s[0].casefold())
+    for ak in kl:
+        print(ak)
+    

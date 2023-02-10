@@ -6,16 +6,18 @@ Created on Fri Feb 10 10:35:54 2023
 @author: repa
 """
 from pyparsing import oneOf, Word, alphas, OneOrMore, ZeroOrMore, \
-    Literal, Regex, ParserElement, LineEnd, Opt, ParseException
+    Literal, Regex, ParserElement, LineEnd, Opt, ParseException, Word
 import re
 import sys
+import string
 
 # newlines are significant for parsing multi-line author lists
 ParserElement.setDefaultWhitespaceChars(' \t')
 
 # ensure we parse most accented names
 unicodePrintables = u''.join(chr(c) for c in range(512) 
-                             if chr(c).isalpha() or chr(c) == "'" or chr(c) =='-')
+                             if chr(c).isalpha() or chr(c) == "'" or
+                             chr(c) =='-' or chr(c) == '_')
 
 def dprint(*argv, **argkw):
     #print(*argv, **argkw)
@@ -56,19 +58,21 @@ firstname = (Word(unicodePrintables, asKeyword=True) +
 nickname = (Literal('(') + Word(unicodePrintables, asKeyword=True) + 
             Literal(')')).set_parse_action(lambda toks: ''.join(toks))
 
+initial = Regex(r'([A-Z]\.)+')
 initials = (
-    (OneOrMore(Regex(r'([A-Z]\.)+')) + 
+    (OneOrMore(initial) + 
      Opt(nickname) +
-     ZeroOrMore(Regex(r'([A-Z]\.)+'))).set_parse_action(setFirst) | \
-    (ZeroOrMore(Regex(r'([A-Z]\.)+')) + 
+     ZeroOrMore(initial)).set_parse_action(setFirst) | \
+    (ZeroOrMore(initial) + 
      Opt(nickname) +
-     OneOrMore(Regex(r'([A-Z]\.)+'))).set_parse_action(setFirst))
+     OneOrMore(initial)).set_parse_action(setFirst))
 
 lastname = OneOrMore(Word(unicodePrintables, asKeyword=True)).set_parse_action(setLast)
-lastcaps = Word(alphas.upper(), asKeyword=True).set_parse_action(setLastCap)
+lastcaps = Word(alphas.upper(), min=2, asKeyword=True).set_parse_action(setLastCap)
 
-author = (Opt(titlepre) + (initials | firstname) + lastname + Opt(titlepost)) | \
-         (lastcaps + firstname + Opt(titlepost))
+author = (lastcaps + firstname + Opt(titlepost)) | \
+    (Opt(titlepre) + (initials | firstname) + lastname + Opt(titlepost))
+         
 
 separator = Literal(',') | Literal('&') | Literal('\n')
 
@@ -82,26 +86,29 @@ class Author:
     
     _decode = re.compile(
         r'(?:(?:"([^"]+)")|(\S+))\s+([^(]+?)\s*(?:\((\d{4}-\d{4}-\d{4}-\d{4})\))?')
-    _authors = dict()
     _members = ('orcid', 'affiliation', 'email',
                 'picture', 'biography')
     
     def __new__(cls, *argv, **argkw):
-        if len(argv) == 1 and hasattr(argv[0], 'keys'):
-            return cls._from_dict(argv[0])
-        elif len(argv) == 2:
-            return cls._from_iterable(argv[0], argv[1])
+        if len(argv) == 2 and hasattr(argv[0], 'keys'):
+            return cls._from_dict(argv[0], argv[1])
+        elif len(argv) == 3:
+            return cls._from_iterable(argv[0], argv[1], argv[2])
         raise ValueError(f"Cannot make author from {argv}")
         
     @classmethod
-    def _from_parts(cls, firstname, lastname, orcid=None):
+    def _from_parts(cls, firstname, lastname, orcid, program):
+        
+        if firstname.upper() == firstname and '.' not in firstname:
+            firstname, lastname = lastname, firstname
+        
         try:
-            return cls._authors[(lastname, firstname, orcid)]
+            return program.authors[(lastname, firstname, orcid)]
         except KeyError:
             if orcid is None:
 
                 # is there an author def with orcid in there?
-                for k, a in cls._authors.items():
+                for k, a in program.authors.items():
                     if k[:2] == (lastname, firstname):
                         print(f"Matching {lastname}, {firstname} to orcid={k[2]}",
                               file=sys.stderr)
@@ -109,33 +116,36 @@ class Author:
             else:
 
                 # is the name there, but without orcid? Appropriate
-                a = cls._authors.get((lastname, firstname, None), False)
+                a = program.authors.get((lastname, firstname, None), False)
                 if a:
                     print(f"Matching orcid={orcid} to {lastname}, {firstname}",
                           file=sys.stderr)
-                    del cls._authors[(lastname, firstname, None)]
-                    cls._authors[(lastname, firstname, orcid)] = a
+                    del program.authors[(lastname, firstname, None)]
+                    program.authors[(lastname, firstname, orcid)] = a
                     return a
 
         # apparently nothing found, create a new author
         obj = super().__new__(cls)
         obj.lastname = lastname
         obj.firstname = firstname
+        obj.orcid = orcid
+        obj._events = []
+        program.authors[obj.key()] = obj
         return obj
 
     @classmethod    
-    def _from_dict(cls, data):
+    def _from_dict(cls, data, program):
         obj = cls._from_parts(data.get('firstname'), 
                               data.get('lastname', 'Anonymous'),
-                              data.get('orcid', None))
+                              data.get('orcid', None),
+                              program)
         for k, v in data.items():
-            if k != '_authors':
-                setattr(obj, k, v)
+            setattr(obj, k, v)
         return obj
         
     @classmethod
-    def _from_iterable(cls, index, row):
-        obj = SingleAuthor(row[index['author']].value)[0]
+    def _from_iterable(cls, index, row, program):
+        obj = SingleAuthor(row[index['author']].value, program)[0]
         
         # these are directly coupled
         for m in cls._members:
@@ -144,11 +154,12 @@ class Author:
         # if applicable, remove the un-orcided one, and install with orcid
         if obj.orcid:
             try:
-                del cls._authors[(obj.lastname, obj.firstname, None)]
+                del program.authors[(obj.lastname, obj.firstname, None)]
+                program.authors[(obj.lastname, obj.firstname, obj.orcid)] = obj
                 print(f"Adding orcid to author {str(obj)}")
             except KeyError:
                 pass
-        cls._authors[(obj.lastname, obj.firstname, obj.orcid)] = obj
+        return obj
         
         
     def __str__(self):
@@ -169,26 +180,30 @@ class Author:
             raise KeyError("Wrong arguments to find author")
         raise KeyError(f"Cannot find author from {kw}")
 
+    def key(self):
+        return (self.lastname, self.firstname, self.orcid)
 
 class AuthorList(list):
     
-    def __init__(self, text):
+    def __init__(self, text, program):
+        self.program = program
         text = text.strip()
         if '\n' in text:
             al = author_line.copy().set_parse_action(self.complete)
             parser = al + OneOrMore(LineEnd() + al)
         else:
             au = author.copy().set_parse_action(self.complete)
-            parser = au + ZeroOrMore(separator + au) 
+            parser = au + ZeroOrMore(separator + au)
         parser.parseString(text)
         
     def complete(self, toks):
         dprint(f"list addition {dict(toks.items())}")
-        self.append(Author(toks))
+        self.append(Author(toks, self.program))
         
 class SingleAuthor(list):
     
-    def __init__(self, text):
+    def __init__(self, text, program):
+        self.program = program
         parser = author_line.copy().set_parse_action(self.complete)
         try:
             parser.parseString(text.strip())
@@ -196,13 +211,17 @@ class SingleAuthor(list):
             raise ParseException(f"Cannot read single author from {text}")
             
     def complete(self, toks):
-        self.append(Author(toks))
+        self.append(Author(toks, self.program))
         
 if __name__ == '__main__':
     
-    print(initials.parseString('J.J.'))
+    print(initial.parseString(' A. '))
+    print(initial.parseString(' A.J. '))
+    print(initial.parseString('B. '))
+    
+    print(initials.parseString('J.J. '))
     print(initials.parseString('J.J. (Rowan)'))
-    print(initials.parseString('N. D.'))
+    print(initials.parseString('N. D. '))
     for test in (
             'Dr Amy Irwin',
             'Lt. Col. Pedro Piedade',
@@ -211,8 +230,6 @@ if __name__ == '__main__':
             ):
         res = author.parseString(test)
         print (res)
-        a = SingleAuthor(test)
-        print(a)
         
     
     res = author_lines.parseString('''Lt Nicholas Armendariz, MSC, USN, Naval Aerospace Medical Institute
@@ -236,5 +253,3 @@ if __name__ == '__main__':
         else:
             res = author_list.parseString(test)
         print (res)
-        a = AuthorList(test)
-        print(a)
