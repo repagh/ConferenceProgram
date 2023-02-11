@@ -56,7 +56,7 @@ class Item:
 
     def key(self):
         return self.item
-
+    
 class TimeSlot:
 
     def __new__(cls, event, program):
@@ -221,6 +221,10 @@ class Program:
         # this may also further fill the authors dict
         processSheet(book['authors'], Author, self)
 
+        self.author_list = [
+            au[1] for au in sorted(self.authors.items(), 
+                                   key=lambda s: s[0][0].casefold()) ]
+
     
 if __name__ == '__main__':
     
@@ -228,4 +232,5 @@ if __name__ == '__main__':
     kl = sorted(pr.authors.keys(), key=lambda s: s[0].casefold())
     for ak in kl:
         print(ak, pr.authors[ak]._items)
-    
+    for ak in pr.author_list:
+        print (ak.nameLastFirst())

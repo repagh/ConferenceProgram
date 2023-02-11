@@ -82,6 +82,11 @@ author_line = (author + Opt(Literal(',') +
 author_lines = author_line + OneOrMore(LineEnd() + author_line)
 author_list = author + ZeroOrMore(separator + author) 
 
+def printattr(o, attrib, pre='', post=' ', default=''):
+    if hasattr(o, attrib):
+        return pre + str(getattr(o, attrib)) + post
+    return default
+
 class Author:
     
     _decode = re.compile(
@@ -182,6 +187,9 @@ class Author:
 
     def key(self):
         return (self.lastname, self.firstname, self.orcid)
+    
+    def nameLastFirst(self):
+        return f'{self.lastname}, {printattr(self, "titlepre")}{self.firstname}{printattr(self, "titlepost", pre=" ", post="")}'
 
 class AuthorList(list):
     

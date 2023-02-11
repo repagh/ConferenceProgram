@@ -6,13 +6,16 @@ Created on Thu Feb  9 09:11:47 2023
 @author: repa
 """
 
+from program import Program
+from programhtml import WriteHTML
 import argparse
-import xlrd
-
 
 parser = argparse.ArgumentParser(
-    '--verbose', action='store_true',
     description="""Compose a conference program""")
+parser.add_argument(
+    '--verbose', action='store_true',
+    help="Verbose run with information output")
+
 parser.add_argument(
     '--program', type=argparse.FileType('r'), required=True, 
     help='''Excel sheet with program. Needs the following tabs
@@ -39,8 +42,6 @@ parser.add_argument(
     
 subparsers = parser.add_subparsers(help='commands', title='Commands')
 
-
-
 class ProgramPdf:
     
     command = 'pdf'
@@ -58,4 +59,10 @@ class ProgramPdf:
         
         program = Program(ns.program)
 
-                
+if __name__ == '__main__':
+
+    pr = Program('../../../TUDelft/community/ISAP2023/collated_abstracts.xlsx')
+    writer = WriteHTML(pr)
+    print(writer.authorList('authorlist.html'))
+    
+    

@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<head>
+  <title> Author list </title>
+</head>
+<body>
+  <ul id="authors">
+    {% for author in authors %}
+    <li><span class="authorName"> {{ author.nameLastFirst() }} </span>
+      <span class="authorItems">
+        {% for item in author._items %}
+        <span class="itemId">
+          {{ item.item }}
+        </span>
+        {% endfor %}
+      </span>
+    </li>
+    {% endfor %}
+  </ul>
+</body>
