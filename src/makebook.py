@@ -8,6 +8,7 @@ Created on Thu Feb  9 09:11:47 2023
 
 from program import Program
 from programhtml import WriteHTML
+from programpdf import WritePDF
 import argparse
 
 parser = argparse.ArgumentParser(
@@ -62,7 +63,12 @@ class ProgramPdf:
 if __name__ == '__main__':
 
     pr = Program('../../../TUDelft/community/ISAP2023/collated_abstracts.xlsx')
-    writer = WriteHTML(pr)
-    print(writer.authorList('authorlist.html'))
+    #writer = WriteHTML(pr)
+    #print(writer.authorList('authorlist.html'))
     
+    writer = WritePDF(pr)
+    writer.authorList('authorlist.pdf')
+    
+    
+    writer.eventList('eventlist.pdf')
     

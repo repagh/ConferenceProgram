@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<head>
+  <title> Events list </title>
+  <link rel="stylesheet" href="isapstyles.css"/>
+</head>
+<body>
+  {% for event in events %}
+  <div class="event {{ event.getEventClass() }}">
+    <div class="header">
+      <span class="time">
+        {{ event.printDay() }} {{ event.printStart() }} - {{ event.printEnd() }}
+      </span>
+      <span class="title">
+        {{ event.title }}
+      </span>
+      <span class="venue">
+        {{ event.venue }}
+      </span>
+      <span class="code">
+        {{ event.event }}
+      </span>
+    </div>
+    {% if event.hasSession() %}
+    <div class="session {{ event._session.format }}">
+      <div class="header">
+        <span class="title">
+          {{ event._session.title }}
+        </span>
+        <span class="chair">
+          {{ event._session.chair }}
+        </span>
+      </div>
+      {% for item in event._session._items %}
+      <div class="item">
+        <span class="title">
+          {{ item.title }}
+        </span>
+        <span class="authors">
+          {{ item.printAuthors() }}
+        </span>
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+  </div>
+  {% endfor %}
+</body>

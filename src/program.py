@@ -30,13 +30,19 @@ class Item:
             if v is not None and v.strip() == '': v = None
             setattr(self, m, v)
             
+        # an item may be presented in multiple sessions, for example the
+        # best student paper candidates
+        self.session = self.session.split(',')
+            
         # link to the session if available
+        coord = row[index['session']].coordinate
+        self._session = []
         try:
-            self._session = program.sessions[self.session]
-            self._session._items.append(self)
-        
+            self._session = [ program.sessions[s] for s in self.session]
         except:
-            raise ValueError(f"Item: cannot find session {self.session}")
+            raise ValueError(f"Item: check items.{coord}, cannot find session {self.session}")
+        for s in self._session:
+            s._items.append(self)
 
         # find, if needed create the authors.
         try:
@@ -57,6 +63,26 @@ class Item:
     def key(self):
         return self.item
     
+    def getEvents(self):
+        """ Return the associated events ID's, if present
+        """
+        return [ s._event.event for s in self._session ]
+        
+    def printAuthors(self):
+        res = []
+        for a in self.authors:
+            res.append(f"{a.firstname} {a.lastname}")
+        return ', '.join(res)
+        
+def daysort(e):
+    _dayvalue = dict(wed=300,thu=400,fri=500,sat=600)
+    try:
+        ses = e.event
+        return _dayvalue[ses[:3]] + 10*int(ses[4]) + \
+            ((len(ses) == 6) and (ord(ses[5])-ord('a')) or 0)
+    except:
+        return 0
+
 class TimeSlot:
 
     def __new__(cls, event, program):
@@ -75,6 +101,9 @@ class TimeSlot:
     
     def key(self):
         return self.start
+    
+    def getEvents(self):
+        return sorted([ e for k, e in self.events.items() ], key=daysort)
 
 
 _timeparse = re.compile('([0-9]{1,2}):([0-9]{2})\s?(AM|PM)?')
@@ -122,6 +151,24 @@ class Event:
 
     def key(self):
         return self.event
+    
+    def getEventClass(self):
+        try:
+            return self._session.format
+        except AttributeError:
+            return ''
+
+    def printDay(self):
+        return self.day.strftime("%a")
+    
+    def printStart(self):
+        return self.start.strftime("%H:%M")
+    
+    def printEnd(self):
+        return self.end.strftime("%H:%M")
+    
+    def hasSession(self):
+        return hasattr(self, '_session')
 
 class Session:
     
@@ -225,6 +272,13 @@ class Program:
             au[1] for au in sorted(self.authors.items(), 
                                    key=lambda s: s[0][0].casefold()) ]
 
+    def getEvents(self):
+        res = []
+        for k, slot in sorted(self.slots.items()):
+            res.extend(slot.getEvents())
+        return res
+            
+    
     
 if __name__ == '__main__':
     
@@ -234,3 +288,5 @@ if __name__ == '__main__':
         print(ak, pr.authors[ak]._items)
     for ak in pr.author_list:
         print (ak.nameLastFirst())
+        
+    print(pr.getEvents())

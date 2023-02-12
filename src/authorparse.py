@@ -87,6 +87,14 @@ def printattr(o, attrib, pre='', post=' ', default=''):
         return pre + str(getattr(o, attrib)) + post
     return default
 
+def daysort(ses):
+    _dayvalue = dict(wed=300,thu=400,fri=500,sat=600)
+    try:
+        return _dayvalue[ses[:3]] + 10*int(ses[4]) + \
+            ((len(ses) == 6) and (ord(ses[5])-ord('a')) or 0)
+    except:
+        return 0
+
 class Author:
     
     _decode = re.compile(
@@ -190,6 +198,12 @@ class Author:
     
     def nameLastFirst(self):
         return f'{self.lastname}, {printattr(self, "titlepre")}{self.firstname}{printattr(self, "titlepost", pre=" ", post="")}'
+
+    def getEventCodes(self):
+        res = []
+        for it in self._items:
+            res.extend(it.getEvents())
+        return sorted(res, key=daysort)
 
 class AuthorList(list):
     

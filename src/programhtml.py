@@ -16,8 +16,12 @@ class WriteHTML:
         
         self.project = project
         
-    def authorList(self, template='authorlist'):
+    def authorList(self, template='authorlist.html'):
         
         gen = environment.get_template(template)
         return gen.render(authors=self.project.author_list)
         
+    def eventList(self, template='eventlist.html'):
+        
+        gen = environment.get_template(template)
+        return gen.render(events=self.project.getEvents())
