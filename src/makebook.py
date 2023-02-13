@@ -71,8 +71,13 @@ if __name__ == '__main__':
     #print(writer.authorList('authorlist.html'))
     
     writer = WritePDF(pr)
-    writer.authorList('authorlist.pdf')
+    writer.authorList('results/authorlist.pdf')
     
     
-    writer.eventList('eventlist.pdf')
+    writer.eventList('results/eventlist.pdf')
+
+    hwriter = WriteHTML(pr)
+
+    with open('results/eventlist.html', 'w') as f:
+        f.write(hwriter.eventList('eventlist.html'))
     

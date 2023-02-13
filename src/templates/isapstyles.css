@@ -13,29 +13,79 @@
 }
 
 .authorItems {
-    position: absolute;
     right: 0px;
     left-margin: 10px;
     display: inline-block;
 }
 
 
+.event .header {
+    width: 100%;
+    display: flex;
+    align-items: stretch;
+}
+
+.event .header .infoblock {
+    width: 20%;
+    float: left;
+    padding-right: 8px;
+    display: inline-block;
+}
+
+.event .header .titleblock {
+    float: right;
+    display: inline-block;
+}
+
+.event .header .chair {
+    width: 100%;
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: 12px;
+    font-style: oblique;   
+}
+
+.infoblock .code {
+    font-family: Impact, Haettenschweiler, 'Arial Narrow Bold', sans-serif;
+    float: right;
+}
+
 div .rotate-left {
-/*    -webkit-transform: rotate(270deg);
+    -webkit-transform: rotate(270deg);
     -moz-transform: rotate(270deg);
     -o-transform: rotate(270deg);
     -ms-transform: rotate(270deg);
-    transform: rotate(270deg); */
-    writing-mode: vertical-rl;
+    transform: rotate(270deg); 
+    /* writing-mode: vertical-rl;
     /* transform: scale(-1, -1); */
 }
 
 div .rotate-right {
-/*    -webkit-transform: rotate(270deg);
+    -webkit-transform: rotate(270deg);
     -moz-transform: rotate(270deg);
     -o-transform: rotate(270deg);
     -ms-transform: rotate(270deg);
-    transform: rotate(270deg); */
-    writing-mode: vertical-lr;
+    transform: rotate(270deg); 
+/*    writing-mode: vertical-lr; */
 }
 
+span.time {
+    font-style: italic;
+    font-weight: lighter;
+    width: 20%;
+}
+
+div.eventblock {
+    margin-bottom: 4px;
+}
+
+div.header {
+    background-color: burlywood;
+}
+
+.session .authors {
+    width: 100%;
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: 12px;
+    font-style: oblique;
+    text-align: right;   
+}

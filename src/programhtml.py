@@ -8,7 +8,6 @@ Created on Sat Feb 11 08:49:33 2023
 from jinja2 import Environment, FileSystemLoader, PackageLoader
 
 environment = Environment(
-#    loader=FileSystemLoader("templates/")
     loader=PackageLoader("programhtml", 'templates')
     )
 

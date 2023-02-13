@@ -171,9 +171,10 @@ class Event:
         return hasattr(self, '_session')
     
     def printShortName(self):
-        if hasattr(self, 'shorttile'):
-            return str(self.shorttitle)
-        return ''
+        try:
+            return self._session.shorttitle
+        except AttributeError:
+            return ''
     
     def printEventCode(self):
         return self.event or ''
@@ -182,6 +183,7 @@ class Event:
         res = []
         for ev in self._slot.getEvents():
             if ev == self:
+                print(f"for {self.event}, list of pre {res}")
                 return res
             res.append(ev)
     
@@ -191,8 +193,21 @@ class Event:
                 res = []
             elif 'res' in locals():
                 res.append(ev)
+        print(f"for {self.event}, list of post {res}")
         return res
     
+    def printChair(self):
+        try:
+            return f"Chair: {self._session.chair}"
+        except AttributeError:
+            return ''
+        
+    def printTitle(self):
+        try:
+            return self._session.title
+        except AttributeError:
+            return self.title
+
 class Session:
     
     _members = ('session', 'title', 'items', 'event', 'format')

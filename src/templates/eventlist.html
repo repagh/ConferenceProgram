@@ -13,49 +13,54 @@
       <p> {{ evs.printShortName() }} </p>
     </div>
     {% endfor %}
+    <!-- each event is in a block -->
     <div class="eventblock">
+      <!-- header with time, title, etc. -->
       <div class="header">
-        <span class="time">
-          {{ event.printDay() }} {{ event.printStart() }} - {{ event.printEnd() }}
-        </span>
-        <span class="title">
-          {{ event.title }}
-        </span>
-        <span class="venue">
-          {{ event.venue }}
-        </span>
-        <span class="code">
-          {{ event.printEventCode() }}
-        </span>
+        <div class="infoblock">
+          <div class="time">
+            {{ event.printDay() }} {{ event.printStart() }} - {{ event.printEnd() }}
+          </div>
+          <div class="place">
+            <span class="venue">
+              {{ event.venue }}
+            </span>
+            <span class="code">
+              {{ event.printEventCode() }}
+            </span>
+          </div>
+        </div>
+        <div class="titleblock">
+          <div class="title">
+            {{ event.printTitle() }}
+          </div>
+          <div class="chair">
+            {{ event.printChair() }}
+          </div>
+        </div>
       </div>
+
+      <!-- for each session, a block with paper info -->
       {% if event.hasSession() %}
       <div class="session {{ event._session.format }}">
-        <div class="header">
-          <span class="title">
-            {{ event._session.title }}
-          </span>
-          <span class="chair">
-            {{ event._session.chair }}
-          </span>
-        </div>
         {% for item in event._session._items %}
         <div class="item">
-          <span class="title">
+          <div class="title">
             {{ item.title }}
-          </span>
-          <span class="authors">
-            {{ item.printAuthors() }}
-          </span>
+            </span>
+            <div class="authors">
+              {{ item.printAuthors() }}
+              </span>
+            </div>
+            {% endfor %}
+          </div>
+          {% endif %}
+        </div>
+        {% for evs in event.succeedingSiblings() %}
+        <div class="eventnext rotate-right {{ evs.sibling_style }}">
+          <p> {{ evs.printShortName() }} </p>
         </div>
         {% endfor %}
       </div>
-      {% endif %}
-    </div>
-    {% for evs in event.succeedingSiblings() %}
-    <div class="eventnext rotate-right {{ evs.sibling_style }}">
-      <p> {{ evs.printShortName() }} </p>
-    </div>
-    {% endfor %}
-  </div>
-  {% endfor %}
+      {% endfor %}
 </body>
