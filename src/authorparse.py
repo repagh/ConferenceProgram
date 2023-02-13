@@ -197,7 +197,7 @@ class Author:
         return (self.lastname, self.firstname, self.orcid)
     
     def nameLastFirst(self):
-        return f'{self.lastname}, {printattr(self, "titlepre")}{self.firstname}{printattr(self, "titlepost", pre=" ", post="")}'
+        return f'{self.lastname}, {printattr(self, "titlepre")}{self.firstname}{printattr(self, "titlepost", pre=", ", post="")}'
 
     def getEventCodes(self):
         res = []

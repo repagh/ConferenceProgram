@@ -1,47 +1,61 @@
 <!DOCTYPE html>
+
 <head>
   <title> Events list </title>
-  <link rel="stylesheet" href="isapstyles.css"/>
+  <link rel="stylesheet" href="isapstyles.css" />
 </head>
+
 <body>
   {% for event in events %}
   <div class="event {{ event.getEventClass() }}">
-    <div class="header">
-      <span class="time">
-        {{ event.printDay() }} {{ event.printStart() }} - {{ event.printEnd() }}
-      </span>
-      <span class="title">
-        {{ event.title }}
-      </span>
-      <span class="venue">
-        {{ event.venue }}
-      </span>
-      <span class="code">
-        {{ event.event }}
-      </span>
+    {% for evs in event.precedingSiblings() %}
+    <div class="eventpre rotate-left {{ evs.sibling_style }}">
+      <p> {{ evs.printShortName() }} </p>
     </div>
-    {% if event.hasSession() %}
-    <div class="session {{ event._session.format }}">
+    {% endfor %}
+    <div class="eventblock">
       <div class="header">
-        <span class="title">
-          {{ event._session.title }}
+        <span class="time">
+          {{ event.printDay() }} {{ event.printStart() }} - {{ event.printEnd() }}
         </span>
-        <span class="chair">
-          {{ event._session.chair }}
+        <span class="title">
+          {{ event.title }}
+        </span>
+        <span class="venue">
+          {{ event.venue }}
+        </span>
+        <span class="code">
+          {{ event.printEventCode() }}
         </span>
       </div>
-      {% for item in event._session._items %}
-      <div class="item">
-        <span class="title">
-          {{ item.title }}
-        </span>
-        <span class="authors">
-          {{ item.printAuthors() }}
-        </span>
+      {% if event.hasSession() %}
+      <div class="session {{ event._session.format }}">
+        <div class="header">
+          <span class="title">
+            {{ event._session.title }}
+          </span>
+          <span class="chair">
+            {{ event._session.chair }}
+          </span>
+        </div>
+        {% for item in event._session._items %}
+        <div class="item">
+          <span class="title">
+            {{ item.title }}
+          </span>
+          <span class="authors">
+            {{ item.printAuthors() }}
+          </span>
+        </div>
+        {% endfor %}
       </div>
-      {% endfor %}
+      {% endif %}
     </div>
-    {% endif %}
+    {% for evs in event.succeedingSiblings() %}
+    <div class="eventnext rotate-right {{ evs.sibling_style }}">
+      <p> {{ evs.printShortName() }} </p>
+    </div>
+    {% endfor %}
   </div>
   {% endfor %}
 </body>

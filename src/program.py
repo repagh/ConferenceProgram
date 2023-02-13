@@ -144,7 +144,7 @@ class Event:
             raise ValueError(f"Cannot convert event times in {rs} and/or {re}: {e}")
         
         # claim/insert the time slot
-        TimeSlot(self, program)
+        self._slot = TimeSlot(self, program)
         
     def __str__(self):
         return str(self.__dict__)
@@ -169,7 +169,30 @@ class Event:
     
     def hasSession(self):
         return hasattr(self, '_session')
+    
+    def printShortName(self):
+        if hasattr(self, 'shorttile'):
+            return str(self.shorttitle)
+        return ''
+    
+    def printEventCode(self):
+        return self.event or ''
 
+    def precedingSiblings(self):
+        res = []
+        for ev in self._slot.getEvents():
+            if ev == self:
+                return res
+            res.append(ev)
+    
+    def succeedingSiblings(self):
+        for ev in self._slot.getEvents():
+            if ev == self:
+                res = []
+            elif 'res' in locals():
+                res.append(ev)
+        return res
+    
 class Session:
     
     _members = ('session', 'title', 'items', 'event', 'format')

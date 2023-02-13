@@ -11,7 +11,7 @@ Created on Sat Feb 11 08:49:33 2023
 from weasyprint import HTML, CSS
 from programhtml import WriteHTML
 from weasyprint.text.fonts import FontConfiguration
-
+from jinja2 import PackageLoader
 
 class WritePDF:
     
@@ -22,13 +22,13 @@ class WritePDF:
     def authorList(self, fname, template='authorlist.html'):
         
         hm = HTML(string=self.html.authorList(template=template))
-        css = CSS(filename="templates/isapstyles.css")
-        fontconfig = FontConfiguration()
+        css = CSS(filename="src/templates/isapstyles.css")
+        fontconfig = FontConfiguration()    
         hm.write_pdf(fname, stylesheets=[css], font_config=fontconfig)
         
     def eventList(self, fname, template='eventlist.html'):
     
         hm = HTML(string=self.html.eventList(template=template))
-        css = CSS(filename="templates/isapstyles.css")
+        css = CSS(filename="src/templates/isapstyles.css")
         fontconfig = FontConfiguration()
         hm.write_pdf(fname, stylesheets=[css], font_config=fontconfig)

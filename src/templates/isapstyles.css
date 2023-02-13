@@ -3,7 +3,9 @@
     margin: 1inch;
 }
 
-
+.authorList {
+    list-stype: none;
+}
 
 .authorName {
     font-style: italic;
@@ -17,4 +19,23 @@
     display: inline-block;
 }
 
+
+div .rotate-left {
+/*    -webkit-transform: rotate(270deg);
+    -moz-transform: rotate(270deg);
+    -o-transform: rotate(270deg);
+    -ms-transform: rotate(270deg);
+    transform: rotate(270deg); */
+    writing-mode: vertical-rl;
+    /* transform: scale(-1, -1); */
+}
+
+div .rotate-right {
+/*    -webkit-transform: rotate(270deg);
+    -moz-transform: rotate(270deg);
+    -o-transform: rotate(270deg);
+    -ms-transform: rotate(270deg);
+    transform: rotate(270deg); */
+    writing-mode: vertical-lr;
+}
 

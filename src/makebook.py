@@ -10,6 +10,8 @@ from program import Program
 from programhtml import WriteHTML
 from programpdf import WritePDF
 import argparse
+import os
+from jinja2 import PackageLoader
 
 parser = argparse.ArgumentParser(
     description="""Compose a conference program""")
@@ -62,7 +64,9 @@ class ProgramPdf:
 
 if __name__ == '__main__':
 
-    pr = Program('../../../TUDelft/community/ISAP2023/collated_abstracts.xlsx')
+    HOME = os.getenv('HOME')
+    print("running from", os.getcwd())
+    pr = Program(f'{HOME}/TUDelft/community/ISAP2023/collated_abstracts.xlsx')
     #writer = WriteHTML(pr)
     #print(writer.authorList('authorlist.html'))
     
