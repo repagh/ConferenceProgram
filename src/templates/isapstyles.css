@@ -4,7 +4,7 @@
 }
 
 .authorList {
-    list-stype: none;
+    list-style: none;
 }
 
 .authorName {
@@ -14,10 +14,29 @@
 
 .authorItems {
     right: 0px;
-    left-margin: 10px;
+    margin-left: 10px;
     display: inline-block;
 }
 
+.event {
+    width: 100%;
+    display: flex;
+    flex-direction: row;
+    justify-content: flex-start;
+    align-items: left;
+    align-content: stretch;
+    column-gap: 4px;
+}
+
+.event > * {
+    padding: 4px;
+}
+
+.event .eventblock {
+    margin: auto;
+    display: inline-block;
+    flex-grow: 100;
+}
 
 .event .header {
     width: 100%;
@@ -27,45 +46,68 @@
 
 .event .header .infoblock {
     width: 20%;
-    float: left;
     padding-right: 8px;
     display: inline-block;
 }
 
 .event .header .titleblock {
-    float: right;
     display: inline-block;
+    flex-grow: 1;
 }
 
-.event .header .chair {
+.event .header .titleblock .chair {
     width: 100%;
     font-family: Arial, Helvetica, sans-serif;
     font-size: 12px;
-    font-style: oblique;   
+    font-style: oblique;
+    text-align: right;
 }
+
+.event .eventblock .session {
+    min-height: 100%;
+    display: flex;
+    align-items: stretch;
+}
+
+.event .eventpre {
+    display: inline-block;
+    vertical-align: middle;
+    text-align: center;  
+    flex-grow: 0;
+}
+
+.event .eventnext {
+    display: inline-block;
+    vertical-align: middle;
+    text-align: center;
+    flex-grow: 0;
+}
+
+span .shortname {
+    margin: auto;
+    border-width: 1px;
+    background-color: green;
+}
+
+
+.session .focused {
+    display: inline-block;
+    flex-grow: 100;
+}
+
 
 .infoblock .code {
     font-family: Impact, Haettenschweiler, 'Arial Narrow Bold', sans-serif;
     float: right;
 }
 
-div .rotate-left {
-    -webkit-transform: rotate(270deg);
-    -moz-transform: rotate(270deg);
-    -o-transform: rotate(270deg);
-    -ms-transform: rotate(270deg);
-    transform: rotate(270deg); 
-    /* writing-mode: vertical-rl;
+div .rotate-right {
+    writing-mode: vertical-rl;
     /* transform: scale(-1, -1); */
 }
 
-div .rotate-right {
-    -webkit-transform: rotate(270deg);
-    -moz-transform: rotate(270deg);
-    -o-transform: rotate(270deg);
-    -ms-transform: rotate(270deg);
-    transform: rotate(270deg); 
-/*    writing-mode: vertical-lr; */
+div .rotate-left {
+    writing-mode: vertical-lr; 
 }
 
 span.time {

@@ -8,13 +8,18 @@
 <body>
   {% for event in events %}
   <div class="event {{ event.getEventClass() }}">
+
+    <!-- for parallel sessions, small, rotated blocks with short names
+	 of siblings in the slot -->
     {% for evs in event.precedingSiblings() %}
-    <div class="eventpre rotate-left {{ evs.sibling_style }}">
-      <p> {{ evs.printShortName() }} </p>
+    <div class="eventpre rotate-left {{ evs.sibling_class }}">
+      <span class="shortname"> {{ evs.shortname }} </span>
     </div>
     {% endfor %}
+    
     <!-- each event is in a block -->
-    <div class="eventblock">
+    <div class="eventblock {{ event.printSiblingClass() }}">
+
       <!-- header with time, title, etc. -->
       <div class="header">
         <div class="infoblock">
@@ -43,24 +48,31 @@
       <!-- for each session, a block with paper info -->
       {% if event.hasSession() %}
       <div class="session {{ event._session.format }}">
-        {% for item in event._session._items %}
-        <div class="item">
-          <div class="title">
-            {{ item.title }}
-            </span>
-            <div class="authors">
-              {{ item.printAuthors() }}
-              </span>
-            </div>
-            {% endfor %}
-          </div>
-          {% endif %}
-        </div>
-        {% for evs in event.succeedingSiblings() %}
-        <div class="eventnext rotate-right {{ evs.sibling_style }}">
-          <p> {{ evs.printShortName() }} </p>
-        </div>
-        {% endfor %}
+        <!-- for parallel sessions, a visual aid, blocks connecting to the
+             parallel session -->
+        <!-- contents of the session itself -->
+        <div class="focused">
+          {% for item in event._session._items %}
+          <div class="item">
+            <div class="title">
+              {{ item.title }}
+	    </div>
+	    <div class="authors">
+	      {{ item.printAuthors() }}
+	    </div>
+	  </div>
+	  {% endfor %}
+	</div>
       </div>
-      {% endfor %}
+      {% endif %}
+    </div>
+    
+    <!-- visual aid blocks with remaining parallel sessions -->
+    {% for evs in event.succeedingSiblings() %}
+    <div class="eventnext rotate-right {{ evs.sibling_class }}">
+      <span class="shortname"> {{ evs.shortname }} </span>
+    </div>
+    {% endfor %}
+  </div>
+  {% endfor %}
 </body>

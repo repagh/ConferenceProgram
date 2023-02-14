@@ -70,14 +70,14 @@ if __name__ == '__main__':
     #writer = WriteHTML(pr)
     #print(writer.authorList('authorlist.html'))
     
-    writer = WritePDF(pr)
-    writer.authorList('results/authorlist.pdf')
+    writer = WritePDF(pr, tdir='templates')
+    writer.authorList('../results/authorlist.pdf')
     
-    
-    writer.eventList('results/eventlist.pdf')
-
     hwriter = WriteHTML(pr)
-
-    with open('results/eventlist.html', 'w') as f:
+    with open('../results/eventlist.html', 'w') as f:
         f.write(hwriter.eventList('eventlist.html'))
-    
+   
+    writer.eventList('../results/eventlist.pdf')
+
+
+     

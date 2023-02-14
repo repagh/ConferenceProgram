@@ -181,20 +181,24 @@ class Event:
 
     def precedingSiblings(self):
         res = []
-        for ev in self._slot.getEvents():
+        for i, ev in enumerate(self._slot.getEvents()):
             if ev == self:
                 print(f"for {self.event}, list of pre {res}")
                 return res
-            res.append(ev)
+            res.append(dict(shortname=ev.printShortName(), 
+                            sibling_class=f"sibling{i}"))
     
     def succeedingSiblings(self):
-        for ev in self._slot.getEvents():
+        for i, ev in enumerate(self._slot.getEvents()):
             if ev == self:
                 res = []
             elif 'res' in locals():
-                res.append(ev)
-        print(f"for {self.event}, list of post {res}")
+                res.append(dict(shortname=ev.printShortName(), 
+                                sibling_class=f"sibling{i}"))
         return res
+    
+    def printSiblingClass(self):
+        return f"sibling{self._slot.getEvents().index(self)}"
     
     def printChair(self):
         try:
@@ -210,7 +214,8 @@ class Event:
 
 class Session:
     
-    _members = ('session', 'title', 'items', 'event', 'format')
+    _members = ('session', 'title', 'shorttitle', 'items', 'event', 
+                'format', 'chair')
     
     def __init__(self, index, row, program):
         for m in Session._members:
