@@ -9,6 +9,7 @@ Created on Thu Feb  9 09:11:47 2023
 from program import Program
 from programhtml import WriteHTML
 from programpdf import WritePDF
+from programdocx import WriteDocx
 import argparse
 import os
 from jinja2 import PackageLoader
@@ -81,5 +82,8 @@ if __name__ == '__main__':
     with open('../results/authorlist.html', 'w') as f:
         f.write(hwriter.authorList('authorlist.html'))
    
-    
+    dwriter = WriteDocx(pr)
+    dwriter.authorList('../results/authorlist.docx')
+    dwriter.eventList('../results/eventlist.docx')
+      
      
