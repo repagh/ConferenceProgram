@@ -13,7 +13,7 @@
     <div class="event {{ event.getEventClass() }}">
 
       <!-- for parallel sessions, small, rotated blocks with short names
-	 of siblings in the slot -->
+         of siblings in the slot -->
       {% for evs in event.precedingSiblings() %}
       <div class="eventpre rotate-left {{ evs.sibling_class }}">
         <span class="shortname"> {{ evs.shortname }} </span>
