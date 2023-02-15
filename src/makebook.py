@@ -12,7 +12,6 @@ from programpdf import WritePDF
 from programdocx import WriteDocx
 import argparse
 import os
-from jinja2 import PackageLoader
 
 parser = argparse.ArgumentParser(
     description="""Compose a conference program""")
