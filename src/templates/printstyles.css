@@ -1,0 +1,149 @@
+@page {
+    size: Letter;
+    margin: 1inch;
+}
+
+.authorList {
+    list-style: none;
+}
+
+.authorName {
+    font-style: italic;
+    font-weight: bold;
+}
+
+.authorItems {
+    right: 0px;
+    margin-left: 10px;
+    display: inline-block;
+}
+
+.event {
+    width: 100%;
+    display: inline-block;
+    flex-direction: row;
+    justify-content: flex-start;
+    align-items: left;
+    align-content: stretch;
+    column-gap: 4px;
+}
+
+.day {
+    margin-left: 5%;
+    margin-right: 5%;
+    margin-top: 30px;
+    margin-bottom: 30px;
+    font-size: 11px;
+    overflow-wrap: break-word;
+}
+
+.event > * {
+    padding: 4px;
+}
+
+.event .eventblock {
+    margin: auto;
+    padding-top: 30px;
+    display: inline-block;
+    flex-grow: 100;
+}
+
+.event .header {
+    width: 100%;
+    display: inline-block;
+    align-items: stretch;
+}
+
+.event .header .infoblock {
+    width: 200px;
+    padding-right: 8px;
+    padding-left: 4%;
+    display: inline-block;
+}
+
+.event .header .titleblock {
+    display: inline-block;
+    flex-grow: 1;
+    padding-right: 4%;
+    padding-left: 20px;
+    border-left: 6px;
+    margin-left: 20px;
+    padding-top: 20px;
+    padding-bottom: 20px;
+    font-weight: bold;
+}
+
+.event .header .titleblock .chair {
+    width: 100%;
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: 10px;
+    font-style: oblique;
+    text-align: center;
+    font-weight: normal;
+}
+
+.event .eventblock .session {
+    min-height: 100%;
+    display: flex;
+    align-items: stretch;
+}
+
+.shaded-region {
+    padding-left: 4%;
+    padding-right: 4%;
+}
+
+.event .eventpre {
+    display: none;
+    width: 3%;
+    vertical-align: middle;
+    text-align: center;  
+    flex-grow: 0;
+}
+
+.event .eventnext {
+    display: none;
+    width: 3%;
+    vertical-align: middle;
+    text-align: center;
+    flex-grow: 0;
+}
+
+.session .focused {
+    display: inline-block;
+    flex-grow: 100;
+}
+
+
+.infoblock .code {
+    font-family: Impact, Haettenschweiler, 'Arial Narrow Bold', sans-serif;
+    float: right;
+}
+
+div .rotate-right {
+    writing-mode: vertical-rl;
+    /* transform: scale(-1, -1); */
+}
+
+div .rotate-left {
+    writing-mode: vertical-lr; 
+}
+
+span.time {
+    font-style: italic;
+    font-weight: lighter;
+    width: 20%;
+}
+
+div.eventblock {
+    margin-bottom: 4px;
+}
+
+.session .authors {
+    width: 100%;
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: 10px;
+    font-style: oblique;
+    text-align: right;   
+}
+

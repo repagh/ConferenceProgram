@@ -25,4 +25,4 @@ class WriteHTML:
     def eventList(self, template='eventlist.html'):
         
         gen = environment.get_template(template)
-        return gen.render(events=self.project.getEvents())
+        return gen.render(days=self.project.getDays())

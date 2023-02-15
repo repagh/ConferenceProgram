@@ -127,7 +127,7 @@ def makeTime(day, t):
         
 class Event:
     
-    _members = ('day', 'start', 'end', 'title', 'venue', 'event')
+    _members = ('day', 'start', 'end', 'title', 'venue', 'event', 'format')
     
     def __init__(self, index, row, program):
         
@@ -138,7 +138,7 @@ class Event:
         # fix the start if needed
         try:
             self.start = makeTime(self.day, self.start)
-            self.end = makeTime(self.day, self.start)
+            self.end = makeTime(self.day, self.end)
         except Exception as e:
             rs, re = row[index['start']].coordinate, row[index['end']].coordinate
             raise ValueError(f"Cannot convert event times in {rs} and/or {re}: {e}")
@@ -154,9 +154,9 @@ class Event:
     
     def getEventClass(self):
         try:
-            return self._session.format
+            return f'{self._session.format} {self.format}'
         except AttributeError:
-            return ''
+            return f'{self.format}'
 
     def printDay(self):
         return self.day.strftime("%a")
@@ -186,7 +186,7 @@ class Event:
                 print(f"for {self.event}, list of pre {res}")
                 return res
             res.append(dict(shortname=ev.printShortName(), 
-                            sibling_class=f"sibling{i}"))
+                            sibling_class=f"pre_sibling{i}"))
     
     def succeedingSiblings(self):
         for i, ev in enumerate(self._slot.getEvents()):
@@ -194,7 +194,7 @@ class Event:
                 res = []
             elif 'res' in locals():
                 res.append(dict(shortname=ev.printShortName(), 
-                                sibling_class=f"sibling{i}"))
+                                sibling_class=f"post_sibling{i}"))
         return res
     
     def printSiblingClass(self):
@@ -236,6 +236,17 @@ class Session:
 
     def key(self):
         return self.session
+    
+class Day:
+
+    def __init__(self, day, starter):
+        self.date = day
+        self.events = [starter]
+
+    def printDate(self, fmt='%A %B %d'):
+        return self.date.strftime(fmt)
+
+
 
 def processSheet(sheet, Object, program=None):
     
@@ -311,6 +322,16 @@ class Program:
         # this may also further fill the authors dict
         processSheet(book['authors'], Author, self)
 
+        # make an organization per day
+        self.days = dict()
+        for k, sl in self.slots.items():
+            day = sl.start.date()
+            for ke, ev in sorted(sl.events.items()):
+                if day in self.days:
+                    self.days[day].events.append(ev)
+                else:
+                    self.days[day] = Day(day, ev)
+        
         self.author_list = [
             au[1] for au in sorted(self.authors.items(), 
                                    key=lambda s: s[0][0].casefold()) ]
@@ -321,7 +342,8 @@ class Program:
             res.extend(slot.getEvents())
         return res
             
-    
+    def getDays(self):
+        return [d for k, d in sorted(self.days.items())]
     
 if __name__ == '__main__':
     

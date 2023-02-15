@@ -15,7 +15,7 @@ from jinja2 import PackageLoader
 
 class WritePDF:
     
-    def __init__(self, project, tdir='src/templates'):
+    def __init__(self, project, tdir='templates'):
         
         self.html = WriteHTML(project)
         self.tdir = tdir
@@ -23,13 +23,13 @@ class WritePDF:
     def authorList(self, fname, template='authorlist.html'):
         
         hm = HTML(string=self.html.authorList(template=template))
-        css = CSS(filename=f"{self.tdir}/isapstyles.css")
+        css = CSS(filename=f"{self.tdir}/printstyles.css")
         fontconfig = FontConfiguration()    
         hm.write_pdf(fname, stylesheets=[css], font_config=fontconfig)
         
     def eventList(self, fname, template='eventlist.html'):
     
         hm = HTML(string=self.html.eventList(template=template))
-        css = CSS(filename=f"{self.tdir}/isapstyles.css")
+        css = CSS(filename=f"{self.tdir}/printstyles.css")
         fontconfig = FontConfiguration()
         hm.write_pdf(fname, stylesheets=[css], font_config=fontconfig)
