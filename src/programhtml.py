@@ -13,24 +13,24 @@ environment = Environment(
     )
 
 class WriteHTML:
-    
+
     def __init__(self, project):
-        
+
         self.project = project
-        
+
     def authorList(self, template='authorlist.html'):
-        
+
         if isinstance(template, str):
             gen = environment.get_template(template)
         else:
             gen = Template(template.read())
         return gen.render(authors=self.project.author_list)
-        
+
     def eventList(self, template='eventlist.html'):
 
         if isinstance(template, str):
            gen = environment.get_template(template)
         else:
            gen = Template(template.read())
-        return gen.render(days=self.project.getDays(), 
+        return gen.render(days=self.project.getDays(),
                           title=self.project.title)
