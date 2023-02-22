@@ -35,21 +35,19 @@ class WriteDocx:
             
             for event in day.events:
                 t = doc.add_table(2, 3, style="Table Grid")
-                t.cell(0, 0).merge(t.cell(0,1))
+                t.cell(0, 1).merge(t.cell(0,2))
                 t.cell(0, 0).text = \
                     f'{event.printDay()} {event.printStart()} - {event.printEnd()}'
                 t.cell(1, 0).text = event.venue
                 t.cell(1, 1).text = event.printEventCode()
-                t.cell(0, 2).text = event.printTitle()
+                t.cell(0, 1).text = event.printTitle()
                 t.cell(1, 2).text = event.printChair()
                 
                 if event.hasSession():
                     for item in event._session._items:
                         r = t.add_row()
                         r.cells[0].merge(r.cells[2])
-                        r.cells[0].text = item.title
-                        r = t.add_row()
-                        r.cells[0].merge(r.cells[2])
-                        r.cells[0].text = item.printAuthors()
+                        r.cells[0].add_paragraph(item.title)
+                        r.cells[0].add_paragraph(item.printAuthors())
                 doc.add_paragraph('')
         doc.save(fname)

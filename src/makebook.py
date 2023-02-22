@@ -227,9 +227,9 @@ ProgramDocx.args(subparsers)
 argvdef = (
     '--title="The Nonsense Conference"',
     f'--program={base}/../example/exampledata.xlsx',
-    'pdf',
-    '--outfile=Nonsense.pdf',
-    '--authorout=Authors.pdf'
+    'docx',
+    '--outfile=Nonsense.docx',
+    '--authorout=Authors.docx'
     )
 
 if __name__ == '__main__':

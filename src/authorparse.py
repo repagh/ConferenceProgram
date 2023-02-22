@@ -48,7 +48,7 @@ def completeAuthor(toks):
 
 # parsing tokens and language
 titlepre = oneOf(('Dr', 'Dr.', 'Prof', 'Prof.', 'dr.', 'dr.ir.', 'Lt',
-                  'Lt Col', 'Lt. Col.', 'Prof. Dr.-Ing.',
+                  'Lt Col', 'Lt. Col.', 'Prof. Dr.-Ing.', 'Professor',
                   'Mr', 'Mr.', 'Mrs.')).set_parse_action(setTitle)
 titlepost = Literal(',') + \
     oneOf(('MSc', 'MSc.', 'PHD', 'Phd.', 'Ed.D', 'Ph.D.', 'MSC',
