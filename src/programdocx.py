@@ -6,8 +6,7 @@ Created on Sat Feb 11 08:49:33 2023
 @author: repa
 """
 
-# pypdf2 : reading/combining /pypdf /pypdf3 
-# weasyprint : rendering with CSS
+# requires python-docx
 from docx import Document
 
 class WriteDocx:
@@ -27,7 +26,7 @@ class WriteDocx:
         
         doc.save(fname)
 
-    def eventList(self, fname, template='eventlist.html'):
+    def eventList(self, fname):
     
         doc = Document()
         for day in self.pr.getDays():

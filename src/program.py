@@ -296,7 +296,9 @@ class Program:
             - A list of authors, with id's of the events in which they appear
               and a check on overlap for appearing in parallel sessions
     """
-    def __init__(self, file):
+    def __init__(self, file, title=''):
+        self.title = title
+        
         book = openpyxl.load_workbook(file)
         self.book = book
         

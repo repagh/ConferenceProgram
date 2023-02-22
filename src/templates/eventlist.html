@@ -6,6 +6,9 @@
 </head>
 
 <body>
+  {% if title %}
+  <h1> {{ title }} </h1>
+  {% endif %}
   {% for day in days %}
   <div class="day">
     <h2> {{ day.printDate() }} </h2>

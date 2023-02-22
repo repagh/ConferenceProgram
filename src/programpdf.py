@@ -12,6 +12,9 @@ from weasyprint import HTML, CSS
 from programhtml import WriteHTML
 from weasyprint.text.fonts import FontConfiguration
 from jinja2 import PackageLoader
+import os
+
+base = os.path.dirname(__file__)
 
 class WritePDF:
     
@@ -20,16 +23,18 @@ class WritePDF:
         self.html = WriteHTML(project)
         self.tdir = tdir
         
-    def authorList(self, fname, template='authorlist.html'):
+    def authorList(self, fname, template=f'{base}/templates/authorlist.html',
+                   css=f'{base}/templates/printstyles.css'):
         
         hm = HTML(string=self.html.authorList(template=template))
-        css = CSS(filename=f"{self.tdir}/printstyles.css")
+        css = CSS(filename=css)
         fontconfig = FontConfiguration()    
         hm.write_pdf(fname, stylesheets=[css], font_config=fontconfig)
         
-    def eventList(self, fname, template='eventlist.html'):
+    def eventList(self, fname, template=f'{base}/templates/authorlist.html',
+                   css=f'{base}/templates/printstyles.css'):
     
         hm = HTML(string=self.html.eventList(template=template))
-        css = CSS(filename=f"{self.tdir}/printstyles.css")
+        css = CSS(filename=css)
         fontconfig = FontConfiguration()
         hm.write_pdf(fname, stylesheets=[css], font_config=fontconfig)
