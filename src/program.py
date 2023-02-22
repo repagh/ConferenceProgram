@@ -109,8 +109,8 @@ class TimeSlot:
 _timeparse = re.compile('([0-9]{1,2}):([0-9]{2})\s?(AM|PM)?')
 
 def makeTime(day, t):
-    if isinstance(t, datetime):
-        return t
+    if isinstance(t, time):
+        return datetime.combine(day, t)
     
     res = _timeparse.match(t)
     h, m = int(res.group(1)), int(res.group(2))
