@@ -9,6 +9,7 @@ Created on Thu Feb  9 10:40:39 2023
 import openpyxl
 from authorparse import Author, AuthorList
 from datetime import date, time, timedelta, datetime
+from spreadbook import BookOfSheets
 import re
 
 class Item:
@@ -16,17 +17,17 @@ class Item:
     _members = ('item', 'title', 'abstract', 'session')
     _required = ('author_list', 'item', 'title', 'session')
 
-    def __init__(self, index, row, program):
+    def __init__(self, row, data, program):
 
         # check the minimum is there
         for m in Item._required:
-            if row[index[m]].value is None or not str(row[index[m]].value).strip():
+            if data[m] is None or not str(data[m]).strip():
                 raise ValueError(
-                    f"No data in cell {row[index[m]].coordinate}, skipping row")
+                    f"No data for {m} in row {row}, skipping row")
 
         # these are directly coupled, make empty string cells void
         for m in Item._members:
-            v = str(row[index[m]].value)
+            v = str(data[m])
             if v is not None and v.strip() == '': v = None
             setattr(self, m, v)
 
@@ -35,21 +36,19 @@ class Item:
         self.session = self.session.split(',')
 
         # link to the session if available
-        coord = row[index['session']].coordinate
         self._session = []
         try:
             self._session = [ program.sessions[s] for s in self.session]
         except:
-            raise ValueError(f"Item: check items.{coord}, cannot find session {self.session}")
+            raise ValueError(f"Item: check items row {row}, cannot find session {self.session}")
         for s in self._session:
             s._items.append(self)
 
         # find, if needed create the authors.
         try:
-            self.authors = list(AuthorList(row[index['author_list']].value,
-                                           program))
+            self.authors = list(AuthorList(data['author_list'], program))
         except:
-            print(f"Cannot get authors from {row[index['author_list']].value}")
+            print(f"Cannot get authors from author_list in row {row}")
             self.authors = [Author(dict(firstname='', lastname='Anonymous'),
                                    program)]
 
@@ -129,19 +128,18 @@ class Event:
 
     _members = ('day', 'start', 'end', 'title', 'venue', 'event', 'format')
 
-    def __init__(self, index, row, program):
+    def __init__(self, row, data, program):
 
         # directly coupled/read
         for m in Event._members:
-            setattr(self, m, row[index[m]].value)
+            setattr(self, m, data[m])
 
         # fix the start if needed
         try:
             self.start = makeTime(self.day, self.start)
             self.end = makeTime(self.day, self.end)
         except Exception as e:
-            rs, re = row[index['start']].coordinate, row[index['end']].coordinate
-            raise ValueError(f"Cannot convert event times in {rs} and/or {re}: {e}")
+            raise ValueError(f"Cannot convert event times in row {row}: {e}")
 
         # claim/insert the time slot
         self._slot = TimeSlot(self, program)
@@ -183,7 +181,7 @@ class Event:
         res = []
         for i, ev in enumerate(self._slot.getEvents()):
             if ev == self:
-                print(f"for {self.event}, list of pre {res}")
+                # print(f"for {self.event}, list of pre {res}")
                 return res
             res.append(dict(shortname=ev.printShortName(),
                             sibling_class=f"pre_sibling{i}"))
@@ -217,9 +215,9 @@ class Session:
     _members = ('session', 'title', 'shorttitle', 'items', 'event',
                 'format', 'chair')
 
-    def __init__(self, index, row, program):
+    def __init__(self, row, data, program):
         for m in Session._members:
-            setattr(self, m, row[index[m]].value)
+            setattr(self, m, data[m])
 
         # find the corresponding event
         try:
@@ -228,7 +226,7 @@ class Session:
             event._session = self
         except KeyError:
             raise KeyError(f"Cannot find event {self.event} for session {self.session}"
-                           f", check {row[index['event']].coordinate}")
+                           f", check event in row {row}")
         self._items = []
 
     def __str__(self):
@@ -253,14 +251,10 @@ def processSheet(sheet, Object, program=None):
     # result
     collect = dict()
 
-    # read the index from the first row
-    index = dict([(c[0].value, c[0].column-1) for
-                 c in sheet.iter_cols(max_row=1)])
-
     # process the remaining rows
-    for row in sheet.iter_rows(min_row=2):
+    for row, data in sheet.iterrows():
         try:
-            o = Object(index, row, program)
+            o = Object(row, data, program)
             collect[o.key()] = o
         except ValueError as e:
             print(f"Creating {Object.__name__}, cannot run row, {e}")
@@ -299,8 +293,8 @@ class Program:
     def __init__(self, file, title=''):
         self.title = title
 
-        book = openpyxl.load_workbook(file)
-        self.book = book
+        #book = openpyxl.load_workbook(file)
+        book = BookOfSheets(file)
 
         # prepare for filling
         self.authors = dict()
@@ -308,21 +302,21 @@ class Program:
 
         # events dict is returned by the call, sorted by event id
         # this also fills the slots, keyed by slot start time
-        self.events = processSheet(book['events'], Event, self)
+        self.events = processSheet(book.events, Event, self)
 
         # the sessions dict is returned by the processSheet call
         # a session is linked to an event, and thereby to a time slot
-        self.sessions = processSheet(book['sessions'], Session, self)
+        self.sessions = processSheet(book.sessions, Session, self)
 
         # the items are linked to a session; they will be added to
         # the list of items there
-        self.items = processSheet(book['items'], Item, self)
+        self.items = processSheet(book.items, Item, self)
 
         # read the full definitions from the authors tab for authors with
         # further details
         #
         # this may also further fill the authors dict
-        processSheet(book['authors'], Author, self)
+        processSheet(book.authors, Author, self)
 
         # make an organization per day
         self.days = dict()

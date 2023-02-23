@@ -27,9 +27,9 @@ parser.add_argument(
     help="Title to print on html/pdf program")
 
 parser.add_argument(
-    '--program', type=argparse.FileType('r'), required=True, 
+    '--program', type=str, required=True,
     help=r'''Excel sheet with program. Needs the following tabs
-    
+
     - items    Paper presentation, panel participation, etc. The first row
                identifies the contents, and needs the following:
                * item     Identifying key
@@ -37,7 +37,7 @@ parser.add_argument(
                * title    Title of the item/contribution
                * author_list List of authors, separated by "," or newline
                * abstract Abstract, or statement/description
-               
+
     - sessions Parts of the conference. First row identifies the contents
                * session  ID for the session (matches items/events tables)
                * title    Title of the session
@@ -51,7 +51,7 @@ parser.add_argument(
 
     - events   Time schedule of the conference. First row identifies the
                contents.
-               * day      Date of the event (date field)    
+               * day      Date of the event (date field)
                * start    Start time of the event
                * end      End time of the event
                * title    Title of the session (to be used if not attached to
@@ -59,17 +59,17 @@ parser.add_argument(
                * venue    Location where the event is held
                * event    Event id (used in sessions table)
                * format   Format strings for the event
-               
-    - authors  List of author names, with additional details, e.g., 
+
+    - authors  List of author names, with additional details, e.g.,
                biography, picture, email, title, affiliation, orcid
     ''')
-    
+
 subparsers = parser.add_subparsers(help='commands', title='Commands')
 
 class ProgramPdf:
-    
+
     command = 'pdf'
-    
+
     @classmethod
     def args(cls, subparsers):
         parser = subparsers.add_parser(
@@ -91,25 +91,24 @@ class ProgramPdf:
             "--event-template", type=argparse.FileType('r'),
             help='Jinja2 template to generate the conference program')
         parser.set_defaults(handler=cls)
-        
+
     def __call__(self, ns):
 
         # process the program spec
-        program = ns.program.name
-        program = Program(program, ns.title)
+        program = Program(ns.program, ns.title)
 
         # figure out template arguments
         if ns.author_template is None:
             author_template = "authorlist.html"
         else:
             author_template = ns.author_template
-            
+
         if ns.event_template is None:
             event_template = "eventlist.html"
         else:
             event_template = ns.event_template
-            
-        try:    
+
+        try:
             css = ns.css.name
         except AttributeError:
             css = f"{base}/templates/printstyles.css"
@@ -131,9 +130,9 @@ ProgramPdf.args(subparsers)
 
 
 class ProgramHtml:
-    
+
     command = 'html'
-    
+
     @classmethod
     def args(cls, subparsers):
         parser = subparsers.add_parser(
@@ -152,24 +151,23 @@ class ProgramHtml:
             "--event-template", type=argparse.FileType('r'),
             help='Jinja2 template to generate the conference program')
         parser.set_defaults(handler=cls)
-        
+
     def __call__(self, ns):
 
         # process the program spec
-        program = ns.program.name
-        program = Program(program, ns.title)
+        program = Program(ns.program, ns.title)
 
         # figure out template arguments
         if ns.author_template is None:
             author_template = "authorlist.html"
         else:
             author_template = ns.author_template
-            
+
         if ns.event_template is None:
             event_template = "eventlist.html"
         else:
             event_template = ns.event_template
-            
+
         # create a writer
         writer = WriteHTML(program)
 
@@ -186,9 +184,9 @@ class ProgramHtml:
 ProgramHtml.args(subparsers)
 
 class ProgramDocx:
-    
+
     command = 'docx'
-    
+
     @classmethod
     def args(cls, subparsers):
         parser = subparsers.add_parser(
@@ -201,13 +199,12 @@ class ProgramDocx:
             "--authorout", type=argparse.FileType('w'),
             help='Output file author list')
         parser.set_defaults(handler=cls)
-        
+
     def __call__(self, ns):
 
         # process the program spec
-        program = ns.program.name
-        program = Program(program)
-            
+        program = Program(ns.program)
+
         # create a writer
         writer = WriteDocx(program)
 
@@ -233,7 +230,7 @@ argvdef = (
     )
 
 if __name__ == '__main__':
-        
+
     if len(sys.argv) > 1:
         pres = parser.parse_args(sys.argv[1:])
     else:

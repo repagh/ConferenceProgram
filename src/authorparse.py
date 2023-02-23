@@ -6,16 +6,14 @@ Created on Fri Feb 10 10:35:54 2023
 @author: repa
 """
 from pyparsing import oneOf, Word, alphas, OneOrMore, ZeroOrMore, \
-    Literal, Regex, ParserElement, LineEnd, Opt, ParseException, Word
-import re
+    Literal, Regex, ParserElement, LineEnd, Opt, ParseException
 import sys
-import string
 
 # newlines are significant for parsing multi-line author lists
 ParserElement.setDefaultWhitespaceChars(' \t')
 
 # ensure we parse most accented names
-unicodePrintables = u''.join(chr(c) for c in range(512) 
+unicodePrintables = u''.join(chr(c) for c in range(512)
                              if chr(c).isalpha() or chr(c) == "'" or
                              chr(c) =='-' or chr(c) == '_')
 
@@ -53,17 +51,17 @@ titlepre = oneOf(('Dr', 'Dr.', 'Prof', 'Prof.', 'dr.', 'dr.ir.', 'Lt',
 titlepost = Literal(',') + \
     oneOf(('MSc', 'MSc.', 'PHD', 'Phd.', 'Ed.D', 'Ph.D.', 'MSC',
            'MS')).set_parse_action(setTitle2)
-firstname = (Word(unicodePrintables, asKeyword=True) + 
+firstname = (Word(unicodePrintables, asKeyword=True) +
              ZeroOrMore(Regex(r'[A-Z]\.'))).set_parse_action(setFirst)
-nickname = (Literal('(') + Word(unicodePrintables, asKeyword=True) + 
+nickname = (Literal('(') + Word(unicodePrintables, asKeyword=True) +
             Literal(')')).set_parse_action(lambda toks: ''.join(toks))
 
 initial = Regex(r'([A-Z]\.)+')
 initials = (
-    (OneOrMore(initial) + 
+    (OneOrMore(initial) +
      Opt(nickname) +
      ZeroOrMore(initial)).set_parse_action(setFirst) | \
-    (ZeroOrMore(initial) + 
+    (ZeroOrMore(initial) +
      Opt(nickname) +
      OneOrMore(initial)).set_parse_action(setFirst))
 
@@ -72,15 +70,15 @@ lastcaps = Word(alphas.upper(), min=2, asKeyword=True).set_parse_action(setLastC
 
 author = (lastcaps + firstname + Opt(titlepost)) | \
     (Opt(titlepre) + (initials | firstname) + lastname + Opt(titlepost))
-         
+
 
 separator = Literal(',') | Literal('&') | Literal('\n')
 
-author_line = (author + Opt(Literal(',') + 
+author_line = (author + Opt(Literal(',') +
                Regex(r'[^\n]*').set_parse_action(setAffiliation))
                )
 author_lines = author_line + OneOrMore(LineEnd() + author_line)
-author_list = author + ZeroOrMore(separator + author) 
+author_list = author + ZeroOrMore(separator + author)
 
 def printattr(o, attrib, pre='', post=' ', default=''):
     if hasattr(o, attrib):
@@ -96,25 +94,23 @@ def daysort(ses):
         return 0
 
 class Author:
-    
-    _decode = re.compile(
-        r'(?:(?:"([^"]+)")|(\S+))\s+([^(]+?)\s*(?:\((\d{4}-\d{4}-\d{4}-\d{4})\))?')
+
     _members = ('orcid', 'affiliation', 'email',
                 'picture', 'biography')
-    
+
     def __new__(cls, *argv, **argkw):
         if len(argv) == 2 and hasattr(argv[0], 'keys'):
             return cls._from_dict(argv[0], argv[1])
         elif len(argv) == 3:
             return cls._from_iterable(argv[0], argv[1], argv[2])
         raise ValueError(f"Cannot make author from {argv}")
-        
+
     @classmethod
     def _from_parts(cls, firstname, lastname, orcid, program):
-        
+
         if firstname.upper() == firstname and '.' not in firstname:
             firstname, lastname = lastname, firstname
-        
+
         try:
             return program.authors[(lastname, firstname, orcid)]
         except KeyError:
@@ -146,24 +142,24 @@ class Author:
         program.authors[obj.key()] = obj
         return obj
 
-    @classmethod    
+    @classmethod
     def _from_dict(cls, data, program):
-        obj = cls._from_parts(data.get('firstname'), 
+        obj = cls._from_parts(data.get('firstname'),
                               data.get('lastname', 'Anonymous'),
                               data.get('orcid', None),
                               program)
         for k, v in data.items():
             setattr(obj, k, v)
         return obj
-        
+
     @classmethod
-    def _from_iterable(cls, index, row, program):
-        obj = SingleAuthor(row[index['author']].value, program)[0]
-        
+    def _from_iterable(cls, row, data, program):
+        obj = SingleAuthor(data['author'], program)[0]
+
         # these are directly coupled
         for m in cls._members:
-            setattr(obj, m, row[index[m]].value)
-        
+            setattr(obj, m, data[m])
+
         # if applicable, remove the un-orcided one, and install with orcid
         if obj.orcid:
             try:
@@ -173,15 +169,15 @@ class Author:
             except KeyError:
                 pass
         return obj
-        
-        
+
+
     def __str__(self):
         return f'{self.lastname}, {self.firstname}'
 
     @classmethod
     def find(cls, **kw):
         try:
-            return cls._authors((kw['lastname'], kw['firstname'], 
+            return cls._authors((kw['lastname'], kw['firstname'],
                                  kw.get('orcid', None)))
         except KeyError:
             pass
@@ -195,7 +191,7 @@ class Author:
 
     def key(self):
         return (self.lastname, self.firstname, self.orcid)
-    
+
     def nameLastFirst(self):
         return f'{self.lastname}, {printattr(self, "titlepre")}{self.firstname}{printattr(self, "titlepost", pre=", ", post="")}'
 
@@ -206,7 +202,7 @@ class Author:
         return sorted(res, key=daysort)
 
 class AuthorList(list):
-    
+
     def __init__(self, text, program):
         self.program = program
         text = text.strip()
@@ -217,13 +213,13 @@ class AuthorList(list):
             au = author.copy().set_parse_action(self.complete)
             parser = au + ZeroOrMore(separator + au)
         parser.parseString(text)
-        
+
     def complete(self, toks):
         dprint(f"list addition {dict(toks.items())}")
         self.append(Author(toks, self.program))
-        
+
 class SingleAuthor(list):
-    
+
     def __init__(self, text, program):
         self.program = program
         parser = author_line.copy().set_parse_action(self.complete)
@@ -231,16 +227,16 @@ class SingleAuthor(list):
             parser.parseString(text.strip())
         except ParseException:
             raise ParseException(f"Cannot read single author from {text}")
-            
+
     def complete(self, toks):
         self.append(Author(toks, self.program))
-        
+
 if __name__ == '__main__':
-    
+
     print(initial.parseString(' A. '))
     print(initial.parseString(' A.J. '))
     print(initial.parseString('B. '))
-    
+
     print(initials.parseString('J.J. '))
     print(initials.parseString('J.J. (Rowan)'))
     print(initials.parseString('N. D. '))
@@ -252,13 +248,13 @@ if __name__ == '__main__':
             ):
         res = author.parseString(test)
         print (res)
-        
-    
+
+
     res = author_lines.parseString('''Lt Nicholas Armendariz, MSC, USN, Naval Aerospace Medical Institute
        J. J. Walcutt, Ph.D., Clay Strategic Designs
        Christina Parker, Ed.D, Education and Technology Branch, Army Aviation Center of Excellence
        Shelbi Kuhlmann, Ph.D., School of Education, UNC-Chapel Hill''')
-    
+
     for test in (
         'Hannah Rennich, Dr. Michael Miller, Dr. John McGuirl, Dr. Timothy Fry',
         'Michael Vidulich & Pamela Tsang',
