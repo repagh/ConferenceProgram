@@ -1,0 +1,30 @@
+<h3>Dear {{ recipientname }},</h3>
+
+<p>Congratulations again on the acceptance or your paper and presentation, titled</p>
+
+    <blockquote>{{ title }}</blockquote>
+
+<p>authored by <it>  {{ authors }} </it></p>
+
+<p>for the 22nd International Symposium on Aviation Psychology, on May 31-Jun 3, to be held at the
+Rochester Institute of Technology (RIT) in Rochester, NY, USA. </p>
+
+<p>The presentation of the paper is scheduled on {{ time }}, in
+session {{ session }}.</p>
+
+{% if poster %}
+<p>The presentation is in a poster session, please prepare and bring a poster. If you have special
+requirements for the poster presentation, please contact us.</p>
+
+{% endif %}
+
+<p>We hope to see you there in person. However, if you nor your co-authors are able to travel
+to attend, please contact us to prepare for online participation.</p>
+
+<p>Best regards, also on behalf of the organizers of the 22nd ISAP,</p>
+
+<p>René van Paassen</p>
+
+
+
+

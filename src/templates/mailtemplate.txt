@@ -1,0 +1,32 @@
+Dear {{ recipientname }},
+
+Congratulations again on the acceptance or your paper and presentation, titled
+
+    {{ title }}
+
+authored by
+
+    {{ authors }}
+
+for the 22nd International Symposium on Aviation Psychology, in May31-Jun 3, to be held at the
+Rochester Institute of Technology (RIT) in Rochester, NY, USA.
+
+The presentation of the paper is scheduled on {{ time }}, in
+session {{ session }}.
+
+{% if poster %}
+The presentation is in a poster session, please prepare and bring a poster. If you have special
+requirements for the poster presentation, please contact us.
+
+{% endif %}
+
+We hope to see you there in person. However, if you nor your co-authors are able to travel
+to attend, please contact us to prepare for online participation.
+
+Best regards, also on behalf of the organizers of the 22nd ISAP,
+
+René van Paassen
+
+
+
+

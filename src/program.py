@@ -14,8 +14,8 @@ import re
 
 class Item:
 
-    _members = ('item', 'title', 'abstract', 'session')
-    _required = ('author_list', 'item', 'title', 'session')
+    _members = ('item', 'title', 'abstract', 'email', 'corresponding', 'session')
+    _required = ('author_list', 'item', 'title', 'email', 'corresponding', 'session')
 
     def __init__(self, row, data, program):
 
@@ -72,6 +72,17 @@ class Item:
         for a in self.authors:
             res.append(f"{a.firstname} {a.lastname}")
         return ', '.join(res)
+
+    def getFieldDetails(self):
+        return dict(
+            recipient=self.email,
+            recipientname=self.corresponding,
+            title=self.title,
+            time=' and on '.join([ f"{s._event.day} at {s.event.start}" for s in self._session]),
+            session=' and in session'.join([s._event.title for s in self._session]),
+            authors=self.printAuthors(),
+            poster=('POSTER' in [s.session for s in self._session])
+            )
 
 def daysort(e):
     _dayvalue = dict(wed=300,thu=400,fri=500,sat=600)
@@ -340,6 +351,10 @@ class Program:
 
     def getDays(self):
         return [d for k, d in sorted(self.days.items())]
+
+    def getAssignedItems(self):
+        return [ it for it in self.items if len(it._session) ]
+
 
 if __name__ == '__main__':
 

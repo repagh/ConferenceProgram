@@ -10,9 +10,11 @@ from program import Program
 from programhtml import WriteHTML
 from programpdf import WritePDF
 from programdocx import WriteDocx
+from programmail import WriteEmail
 import argparse
 import os
 import sys
+import getpass, smtplib, ssl, mailbox
 
 # find the current file's folder, for finding templates and the like
 base = os.path.dirname(__file__)
@@ -219,6 +221,73 @@ class ProgramDocx:
         except AttributeError:
             pass
 ProgramDocx.args(subparsers)
+
+class ProgramEmail:
+
+    command = 'email'
+
+    @classmethod
+    def args(cls, subparsers):
+        parser = subparsers.add_parser(
+            cls.command,
+            help="Send or create e-mails to corresponding authors")
+        parser.add_argument(
+            "--mailserver", type=str,
+            help="Email server")
+        parser.add_argument(
+            "--user", type=str,
+            help="Username for email server, name for email sender")
+        parser.add_argument(
+            "--email", type=str, default='no-reply@nowhere.org',
+            help="From email for email sender")
+        parser.add_argument(
+            "--html-template", type=argparse.FileType('r'),
+            default="templates/mailtemplate.html",
+            help="Template for sending email")
+        parser.add_argument(
+            "--txt-template", type=argparse.FileType('r'),
+            default="templates/mailtemplate.txt",
+            help="Template for sending email")
+        parser.add_argument(
+            "--mboxfile", type=argparse.FileType('w'),
+            help='Mail file for saving all concepts')
+        parser.set_defaults(handler=cls)
+
+    def __call__(self, ns):
+
+        # process the program spec
+        program = Program(ns.program)
+        sendemail = ns.email or 'no-reply@isap.org'
+        user = ns.user
+
+        # create a writer
+        writer = WriteEmail(program, sendemail, ns.html_template, ns.txt_template)
+
+        # and email connection
+        server = None
+        if ns.mailserver and ns.user:
+            pw = getpass.getpass("Password for email server")
+            context = ssl.create_default_context()
+            server = smgplib.SMTP_SSL(ns.mailserver, 465, context=context)
+            server.login(ns.user, password)
+
+        # if we have an outfile
+        mbox = None
+        if ns.outfile:
+            mbname = ns.outfile.name
+            ns.outfile.close()
+            mbox = mailbox.mbox(mbname)
+
+        # if we have an outfile
+        for mail, recipient in writer.mails():
+            if mbox:
+                mbox.add(mail)
+            if server:
+                server.sendmail(ns.sender, recipient, mail)
+
+        server and server.quit()
+        ns.outfile and ns.outfile.close()
+ProgramEmail.args(subparsers)
 
 # default arguments
 argvdef = (
