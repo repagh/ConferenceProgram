@@ -18,6 +18,11 @@ session {{ session }}.
 The presentation is in a poster session, please prepare and bring a poster. If you have special
 requirements for the poster presentation, please contact us.
 
+{% else %}
+{% for c in chair %}
+   Your presentation in session "{{ c.session }}" will be chaired by {{ c.name }}<{{ c.email }}>. Please contact your session chair, and provide her/him with a short bio of the presenter.
+
+{% endfor %}
 {% endif %}
 
 We hope to see you there in person. However, if you nor your co-authors are able to travel

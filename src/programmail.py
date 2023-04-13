@@ -25,25 +25,31 @@ class MailIter:
         return self
 
     def __next__(self):
-        self.ix = next(self.ix)
-        data = self.ix.getFieldDetails()
+        it = next(self.ix)
+        data = it.getFieldDetails()
 
-        msg = MIMEMultiPart('alternative')
+        recipient = self.wm.testmail or data['recipient']
+        msg = MIMEMultipart('alternative')
         msg['From'] = self.wm.sender
-        msg['To'] = self.ix.email
+        msg['To'] = recipient
         msg['Subject'] = self.wm.subject
         msg.attach(MIMEText(self.wm.gentxt.render(**data), 'plain'))
         msg.attach(MIMEText(self.wm.genhtml.render(**data), 'html'))
-        return msg.as_string(), data.recipient
+        message = msg.as_string()
+        
+        return message, recipient
 
 class WriteEmail:
 
-    def __init__(self, program, sender,
-                 tmplhtml='templates/mailtemplate.html', tmpltxt='templates/mailtemplate.txt',
-                 subject="A message about your conference participation"):
+    def __init__(self, program, sender, subject,
+                 tmplhtml='templates/mailtemplate.html', 
+                 tmpltxt='templates/mailtemplate.txt',
+                 testmail=None):
 
         self.program = program
         self.sender = sender
+        self.subject = subject
+        self.testmail = testmail
         if isinstance(tmpltxt, str):
             self.gentxt = environment.get_template(tmppltxt)
         else:

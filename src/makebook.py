@@ -249,8 +249,11 @@ class ProgramEmail:
             default="templates/mailtemplate.txt",
             help="Template for sending email")
         parser.add_argument(
-            "--mboxfile", type=argparse.FileType('w'),
+            "--outfile", type=argparse.FileType('w'),
             help='Mail file for saving all concepts')
+        parser.add_argument(
+            "--testmail", type=str,
+            help="test recipient email")
         parser.set_defaults(handler=cls)
 
     def __call__(self, ns):
@@ -258,18 +261,19 @@ class ProgramEmail:
         # process the program spec
         program = Program(ns.program)
         sendemail = ns.email or 'no-reply@isap.org'
-        user = ns.user
 
         # create a writer
-        writer = WriteEmail(program, sendemail, ns.html_template, ns.txt_template)
+        writer = WriteEmail(program, sendemail, ns.title, 
+                            ns.html_template, ns.txt_template,
+                            ns.testmail)
 
         # and email connection
         server = None
         if ns.mailserver and ns.user:
-            pw = getpass.getpass("Password for email server")
+            pw = getpass.getpass("Password for email server : ")
             context = ssl.create_default_context()
-            server = smgplib.SMTP_SSL(ns.mailserver, 465, context=context)
-            server.login(ns.user, password)
+            server = smtplib.SMTP_SSL(ns.mailserver, 465, context=context)
+            server.login(ns.user, pw)
 
         # if we have an outfile
         mbox = None
@@ -279,24 +283,29 @@ class ProgramEmail:
             mbox = mailbox.mbox(mbname)
 
         # if we have an outfile
-        for mail, recipient in writer.mails():
-            if mbox:
-                mbox.add(mail)
+        for message, recipient in writer.mails():
+            print("to", recipient)
+            if ns.outfile:
+                mkey = mbox.add(message)
+                print("added message", mkey)
             if server:
-                server.sendmail(ns.sender, recipient, mail)
+                server.sendmail(ns.email, recipient, message)
 
         server and server.quit()
-        ns.outfile and ns.outfile.close()
+        ns.outfile and mbox.close()
 ProgramEmail.args(subparsers)
 
 # default arguments
 argvdef = (
     '--title="The Nonsense Conference"',
     f'--program={base}/../example/exampledata.xlsx',
-    'docx',
-    '--outfile=Nonsense.docx',
-    '--authorout=Authors.docx'
+    'email',
+    '--outfile=Nonsense.mbox',
+    '--email=M.M.vanPaassen@TUDelft.nl',
+    '--testmail=rene_vanpaassen@yahoo.com'
     )
+
+
 
 if __name__ == '__main__':
 

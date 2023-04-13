@@ -78,10 +78,14 @@ class Item:
             recipient=self.email,
             recipientname=self.corresponding,
             title=self.title,
-            time=' and on '.join([ f"{s._event.day} at {s.event.start}" for s in self._session]),
+            time=' and on '.join([ f"{s._event.day} at {s._event.start}" for s in self._session]),
             session=' and in session'.join([s._event.title for s in self._session]),
             authors=self.printAuthors(),
-            poster=('POSTER' in [s.session for s in self._session])
+            poster=('POSTER' in [s.session for s in self._session]),
+            chair=[dict(name=s.chair,
+                        email=s.chair_email,
+                        session=s._event.title)
+                   for s in self._session if s.chair],
             )
 
 def daysort(e):
@@ -211,7 +215,9 @@ class Event:
 
     def printChair(self):
         try:
-            return f"Chair: {self._session.chair}"
+            if self._session.chair:
+                return f"Chair: {self._session.chair}"
+            return ''
         except AttributeError:
             return ''
 
@@ -224,11 +230,15 @@ class Event:
 class Session:
 
     _members = ('session', 'title', 'shorttitle', 'items', 'event',
-                'format', 'chair')
+                'format', 'chair', 'chair_email')
 
     def __init__(self, row, data, program):
         for m in Session._members:
-            setattr(self, m, data[m])
+            try:
+                setattr(self, m, data[m])
+            except KeyError as e:
+                print(f"Cannot find key {m} in {data}")
+                raise e
 
         # find the corresponding event
         try:
@@ -353,7 +363,7 @@ class Program:
         return [d for k, d in sorted(self.days.items())]
 
     def getAssignedItems(self):
-        return [ it for it in self.items if len(it._session) ]
+        return [ it for k, it in self.items.items() if len(it._session) ]
 
 
 if __name__ == '__main__':

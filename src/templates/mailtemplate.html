@@ -15,7 +15,15 @@ session {{ session }}.</p>
 {% if poster %}
 <p>The presentation is in a poster session, please prepare and bring a poster. If you have special
 requirements for the poster presentation, please contact us.</p>
+{% else %}
 
+{% for c in chair %}
+   <p>Your presentation in session "{{ c.session }}" will be chaired
+   by {{ c.name }}&lt;{{ c.email }}&gt;. Please contact your session
+   chair, and provide her/him with a short bio of you or the presenter
+   if someone else will be presenting.</p>
+
+{% endfor %}
 {% endif %}
 
 <p>We hope to see you there in person. However, if you nor your co-authors are able to travel
