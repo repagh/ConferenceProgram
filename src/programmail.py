@@ -32,17 +32,18 @@ class MailIter:
         msg = MIMEMultipart('alternative')
         msg['From'] = self.wm.sender
         msg['To'] = recipient
+        msg['Cc'] = self.wm.sender
         msg['Subject'] = self.wm.subject
         msg.attach(MIMEText(self.wm.gentxt.render(**data), 'plain'))
         msg.attach(MIMEText(self.wm.genhtml.render(**data), 'html'))
         message = msg.as_string()
-        
-        return message, recipient
+
+        return message, (recipient, )
 
 class WriteEmail:
 
     def __init__(self, program, sender, subject,
-                 tmplhtml='templates/mailtemplate.html', 
+                 tmplhtml='templates/mailtemplate.html',
                  tmpltxt='templates/mailtemplate.txt',
                  testmail=None):
 

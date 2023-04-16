@@ -78,14 +78,17 @@ class Item:
             recipient=self.email,
             recipientname=self.corresponding,
             title=self.title,
-            time=' and on '.join([ f"{s._event.day} at {s._event.start}" for s in self._session]),
-            session=' and in session'.join([s._event.title for s in self._session]),
+            time=' and on '.join([ f"{s._event.printDay()} at {s._event.printStart()}" for s in self._session]),
+            session=' and in session'.join([
+                f"{s._event.title}: {s._event._session.title}"
+                for s in self._session]),
             authors=self.printAuthors(),
             poster=('POSTER' in [s.session for s in self._session]),
             chair=[dict(name=s.chair,
                         email=s.chair_email,
-                        session=s._event.title)
-                   for s in self._session if s.chair],
+                        session=s._event._session.title)
+                   for s in self._session
+                   if s.chair and s.chair_email and s._event._session.title ],
             )
 
 def daysort(e):

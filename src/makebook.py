@@ -14,7 +14,8 @@ from programmail import WriteEmail
 import argparse
 import os
 import sys
-import getpass, smtplib, ssl, mailbox
+import getpass, smtplib, ssl, mailbox, imaplib
+import time
 
 # find the current file's folder, for finding templates and the like
 base = os.path.dirname(__file__)
@@ -232,8 +233,11 @@ class ProgramEmail:
             cls.command,
             help="Send or create e-mails to corresponding authors")
         parser.add_argument(
-            "--mailserver", type=str,
-            help="Email server")
+            "--smtp-server", type=str,
+            help="SMTP Email server, for sending the emails")
+        parser.add_argument(
+            "--imap-server", type=str,
+            help="IMAP mail host, for sent-items copies")
         parser.add_argument(
             "--user", type=str,
             help="Username for email server, name for email sender")
@@ -263,17 +267,26 @@ class ProgramEmail:
         sendemail = ns.email or 'no-reply@isap.org'
 
         # create a writer
-        writer = WriteEmail(program, sendemail, ns.title, 
+        writer = WriteEmail(program, sendemail, ns.title,
                             ns.html_template, ns.txt_template,
                             ns.testmail)
 
         # and email connection
         server = None
-        if ns.mailserver and ns.user:
-            pw = getpass.getpass("Password for email server : ")
+        imap = None
+        pw = None
+
+        if (ns.smtp_server or ns.imap_server) and ns.user:
+            pw = getpass.getpass("Password for email servers : ")
             context = ssl.create_default_context()
-            server = smtplib.SMTP_SSL(ns.mailserver, 465, context=context)
+
+        if ns.smtp_server and ns.user:
+            server = smtplib.SMTP_SSL(ns.smtp_server, 465, context=context)
             server.login(ns.user, pw)
+
+        if ns.imap_server and ns.user:
+            imap = imaplib.IMAP4_SSL(ns.imap_server, 993, ssl_context=context)
+            imap.login(ns.user, pw)
 
         # if we have an outfile
         mbox = None
@@ -290,9 +303,17 @@ class ProgramEmail:
                 print("added message", mkey)
             if server:
                 server.sendmail(ns.email, recipient, message)
+            if imap:
+                res = imap.append('Sent', r'(\Seen)',
+                                  imaplib.Time2Internaldate(time.time()),
+                                  message.encode('utf8'))
+                if res[0] != 'OK':
+                    print("Could not append message to Sent folder", res)
 
         server and server.quit()
+        imap and imap.logout()
         ns.outfile and mbox.close()
+
 ProgramEmail.args(subparsers)
 
 # default arguments
