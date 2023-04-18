@@ -6,16 +6,20 @@ Created on Thu Feb  9 10:40:39 2023
 @author: repa
 """
 
-import openpyxl
 from authorparse import Author, AuthorList
-from datetime import date, time, timedelta, datetime
+from datetime import time, datetime
 from spreadbook import BookOfSheets
+import itertools
+import sys
 import re
+
 
 class Item:
 
-    _members = ('item', 'title', 'abstract', 'email', 'corresponding', 'session')
-    _required = ('author_list', 'item', 'title', 'email', 'corresponding', 'session')
+    _members = ('item', 'title', 'abstract',
+                'email', 'corresponding', 'session')
+    _required = ('author_list', 'item', 'title',
+                 'email', 'corresponding', 'session')
 
     def __init__(self, row, data, program):
 
@@ -28,7 +32,8 @@ class Item:
         # these are directly coupled, make empty string cells void
         for m in Item._members:
             v = str(data[m])
-            if v is not None and v.strip() == '': v = None
+            if v is not None and v.strip() == '':
+                v = None
             setattr(self, m, v)
 
         # an item may be presented in multiple sessions, for example the
@@ -38,9 +43,10 @@ class Item:
         # link to the session if available
         self._session = []
         try:
-            self._session = [ program.sessions[s] for s in self.session]
+            self._session = [program.sessions[s] for s in self.session]
         except:
-            raise ValueError(f"Item: check items row {row}, cannot find session {self.session}")
+            raise ValueError(
+                f"Item: check items row {row}, cannot find session {self.session}")
         for s in self._session:
             s._items.append(self)
 
@@ -65,7 +71,7 @@ class Item:
     def getEvents(self):
         """ Return the associated events ID's, if present
         """
-        return [ s._event.event for s in self._session ]
+        return [s._event.event for s in self._session]
 
     def printAuthors(self):
         res = []
@@ -78,7 +84,8 @@ class Item:
             recipient=self.email,
             recipientname=self.corresponding,
             title=self.title,
-            time=' and on '.join([ f"{s._event.printDay()} at {s._event.printStart()}" for s in self._session]),
+            time=' and on '.join(
+                [f"{s._event.printDay()} at {s._event.printStart()}" for s in self._session]),
             session=' and in session'.join([
                 f"{s._event.title}: {s._event._session.title}"
                 for s in self._session]),
@@ -88,17 +95,19 @@ class Item:
                         email=s.chair_email,
                         session=s._event._session.title)
                    for s in self._session
-                   if s.chair and s.chair_email and s._event._session.title ],
-            )
+                   if s.chair and s.chair_email and s._event._session.title],
+        )
+
 
 def daysort(e):
-    _dayvalue = dict(wed=300,thu=400,fri=500,sat=600)
+    _dayvalue = dict(wed=300, thu=400, fri=500, sat=600)
     try:
         ses = e.event
         return _dayvalue[ses[:3]] + 10*int(ses[4]) + \
             ((len(ses) == 6) and (ord(ses[5])-ord('a')) or 0)
     except:
         return 0
+
 
 class TimeSlot:
 
@@ -110,7 +119,7 @@ class TimeSlot:
             slot.events[event.event] = event
         except KeyError:
             slot = super().__new__(cls)
-            slot.events = { event.event : event }
+            slot.events = {event.event: event}
             slot.start = event.start
             slot.end = event.end
             program.slots[event.start] = slot
@@ -120,10 +129,11 @@ class TimeSlot:
         return self.start
 
     def getEvents(self):
-        return sorted([ e for k, e in self.events.items() ], key=daysort)
+        return sorted([e for k, e in self.events.items()], key=daysort)
 
 
 _timeparse = re.compile('([0-9]{1,2}):([0-9]{2})\s?(AM|PM)?')
+
 
 def makeTime(day, t):
     if isinstance(t, time):
@@ -230,6 +240,7 @@ class Event:
         except AttributeError:
             return self.title
 
+
 class Session:
 
     _members = ('session', 'title', 'shorttitle', 'items', 'event',
@@ -259,6 +270,13 @@ class Session:
     def key(self):
         return self.session
 
+    def allAuthors(self):
+        res = set()
+        for i in self._items:
+            res |= set(i.authors)
+        return res
+
+
 class Day:
 
     def __init__(self, day, starter):
@@ -267,7 +285,6 @@ class Day:
 
     def printDate(self, fmt='%A %B %d'):
         return self.date.strftime(fmt)
-
 
 
 def processSheet(sheet, Object, program=None):
@@ -284,6 +301,7 @@ def processSheet(sheet, Object, program=None):
             print(f"Creating {Object.__name__}, cannot run row, {e}")
 
     return collect
+
 
 class Program:
     """ Representation of a conference program.
@@ -314,7 +332,8 @@ class Program:
             - A list of authors, with id's of the events in which they appear
               and a check on overlap for appearing in parallel sessions
     """
-    def __init__(self, file, title=''):
+
+    def __init__(self, file, title='', check_overlap=True):
         self.title = title
 
         #book = openpyxl.load_workbook(file)
@@ -354,7 +373,10 @@ class Program:
 
         self.author_list = [
             au[1] for au in sorted(self.authors.items(),
-                                   key=lambda s: s[0][0].casefold()) ]
+                                   key=lambda s: s[0][0].casefold())]
+
+        if check_overlap:
+            self.checkAuthorEventOverlap()
 
     def getEvents(self):
         res = []
@@ -366,16 +388,32 @@ class Program:
         return [d for k, d in sorted(self.days.items())]
 
     def getAssignedItems(self):
-        return [ it for k, it in self.items.items() if len(it._session) ]
+        return [it for k, it in self.items.items() if len(it._session)]
+
+    def checkAuthorEventOverlap(self):
+        for k, slot in sorted(self.slots.items()):
+            if len(slot.getEvents()) > 1:
+                # create sets of authors
+                authorsets = [
+                    (e.event, e._session.allAuthors())
+                    for e in slot.getEvents()]
+
+                for s1, s2 in itertools.combinations(authorsets, 2):
+                    common_authors = s1[1].intersection(s2[1])
+                    if common_authors:
+                        ca = ' and '.join([str(a) for a in common_authors])
+                        print(f"Authors for parallel events {s1[0]} and {s2[0]} overlap\n",
+                              f"common authors: {ca}", file=sys.stderr)
 
 
 if __name__ == '__main__':
 
-    pr = Program('../../../TUDelft/community/ISAP2023/collated_abstracts.xlsx')
+    pr = Program(
+        '../../../TUDelft/community/ISAP2023/ISAP 2023 shedule data230417b.xlsx')
     kl = sorted(pr.authors.keys(), key=lambda s: s[0].casefold())
     for ak in kl:
         print(ak, pr.authors[ak]._items)
     for ak in pr.author_list:
-        print (ak.nameLastFirst())
+        print(ak.nameLastFirst())
 
     print(pr.getEvents())

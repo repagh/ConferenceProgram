@@ -14,7 +14,11 @@ from programmail import WriteEmail
 import argparse
 import os
 import sys
-import getpass, smtplib, ssl, mailbox, imaplib
+import getpass
+import smtplib
+import ssl
+import mailbox
+import imaplib
 import time
 
 # find the current file's folder, for finding templates and the like
@@ -68,6 +72,7 @@ parser.add_argument(
     ''')
 
 subparsers = parser.add_subparsers(help='commands', title='Commands')
+
 
 class ProgramPdf:
 
@@ -129,6 +134,8 @@ class ProgramPdf:
             writer.authorList(outfile, template=author_template, css=css)
         except AttributeError:
             pass
+
+
 ProgramPdf.args(subparsers)
 
 
@@ -184,7 +191,10 @@ class ProgramHtml:
             ns.authorout.close()
         except AttributeError:
             pass
+
+
 ProgramHtml.args(subparsers)
+
 
 class ProgramDocx:
 
@@ -221,7 +231,10 @@ class ProgramDocx:
             writer.authorList(outfile)
         except AttributeError:
             pass
+
+
 ProgramDocx.args(subparsers)
+
 
 class ProgramEmail:
 
@@ -314,6 +327,7 @@ class ProgramEmail:
         imap and imap.logout()
         ns.outfile and mbox.close()
 
+
 ProgramEmail.args(subparsers)
 
 # default arguments
@@ -324,8 +338,7 @@ argvdef = (
     '--outfile=Nonsense.mbox',
     '--email=M.M.vanPaassen@TUDelft.nl',
     '--testmail=rene_vanpaassen@yahoo.com'
-    )
-
+)
 
 
 if __name__ == '__main__':
