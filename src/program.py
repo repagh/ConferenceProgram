@@ -84,11 +84,15 @@ class Item:
             recipient=self.email,
             recipientname=self.corresponding,
             title=self.title,
-            time=' and on '.join(
+            daysandtimes=' and on '.join(
                 [f"{s._event.printDay()} at {s._event.printStart()}" for s in self._session]),
+            day=', '.join([s._event.printDayFull() for s in self._session]),
+            time=', '.join([s._event.printStart() for s in self._session]),
             session=' and in session'.join([
                 f"{s._event.title}: {s._event._session.title}"
                 for s in self._session]),
+            sessiontitle=', '.join([s._event._session.title
+                                    for s in self._session]),
             authors=self.printAuthors(),
             poster=('POSTER' in [s.session for s in self._session]),
             chair=[dict(name=s.chair,
@@ -186,6 +190,9 @@ class Event:
 
     def printDay(self):
         return self.day.strftime("%a")
+    
+    def printDayFull(self):
+        return self.day.strftime("%A, %B %e")
 
     def printStart(self):
         return self.start.strftime("%H:%M")
