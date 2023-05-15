@@ -233,6 +233,11 @@ class ProgramEmail:
             cls.command,
             help="Send or create e-mails to corresponding authors")
         parser.add_argument(
+            "--target", choices=("corresponding", "chairs", "chairgroup"),
+            default="corresponding", 
+            help="Address to type: corresponding - each item in the program\n"
+                 "chairs - chairpersons, once per chair, chairgroup - chairs+authors")
+        parser.add_argument(
             "--smtp-server", type=str,
             help="SMTP Email server, for sending the emails")
         parser.add_argument(
@@ -295,8 +300,8 @@ class ProgramEmail:
             ns.outfile.close()
             mbox = mailbox.mbox(mbname)
 
-        # if we have an outfile
-        for message, recipient in writer.mails():
+        # Run through all mails, and save, send, save to imap
+        for message, recipient in writer.mails(ns.target):
             print("to", recipient)
             if ns.outfile:
                 mkey = mbox.add(message)

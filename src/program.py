@@ -10,7 +10,10 @@ import openpyxl
 from authorparse import Author, AuthorList
 from datetime import date, time, timedelta, datetime
 from spreadbook import BookOfSheets
+from emailaddress import EmailAddress
 import re
+import html
+
 
 class Item:
 
@@ -90,6 +93,13 @@ class Item:
                    for s in self._session
                    if s.chair and s.chair_email and s._event._session.title ],
             )
+
+    def correspondingAuthors(self):
+        if self.presenter:
+            return (EmailAddress(self.corresponding, self.email), 
+                EmailAddress(self.presenter))
+        else:
+            return (EmailAddress(self.corresponding, self.email), )
 
 def daysort(e):
     _dayvalue = dict(wed=300,thu=400,fri=500,sat=600)
@@ -258,6 +268,30 @@ class Session:
 
     def key(self):
         return self.session
+
+    def chairEmail(self):
+        return EmailAddress(self.chair, self.chair_email)
+
+    def authorEmails(self):
+        res = []
+        for it in self._items:
+            res.append(EmailAddress(it.corresponding, it.email))
+            if it.presenter:
+                res.append(EmailAddress(it.presenter))
+        return res
+
+    def getFieldDetails(self):
+        return dict(
+            sessiontitle=self.title,
+            chairperson=self.chair,
+            chair_email=self.chair_email,
+            dayandtime=f"{self._event.printDay()} at {self._event.printStart()}",
+            items=[ dict(authors=it.printAuthors(), 
+                         title=it.title, 
+                         corresponding=it.correspondingAuthors()) 
+                    for i in self._items],
+            poster=('POSTER' in self.format),
+        )
 
 class Day:
 
