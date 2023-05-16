@@ -5,19 +5,21 @@ Created on Sat Feb 11 08:49:33 2023
 
 @author: repa
 """
+from emailaddress import addressEmails
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
 from jinja2 import Environment, PackageLoader, \
     Template
 
-from email.mime.multipart import MIMEMultipart
-from email.mime.text import MIMEText
-
+# create an environment for jinja loading
 environment = Environment(
     loader=PackageLoader("programmail", 'templates')
     )
 
+
 class MailIter:
 
-    def __init__(self, wm):
+    def __init__(self, wm, sendlist):
         """Produce an email iterator
 
         This 
@@ -26,20 +28,20 @@ class MailIter:
             wm -- _description_
         """
         self.wm = wm
+        self.sendlist = sendlist
 
-    def __iter__(self, sendlist):
-        self.ix = iter(sendlist)
+    def __iter__(self):
+        self.ix = iter(self.sendlist)
         return self
 
     def __next__(self):
         it = next(self.ix)
-        data = it.getFieldDetails()
+        data = it[0].getFieldDetails()
 
-        recipientlist = self.wm.testmail or data['recipient']
-        recipients = (self.wm.testmail,) or data['recipients']
+        recipients = (self.wm.testmail,) or it[1]
         msg = MIMEMultipart('alternative')
         msg['From'] = self.wm.sender
-        msg['To'] = recipientlist
+        msg['To'] = addressEmails(recipients)
         msg['Cc'] = self.wm.sender
         msg['Subject'] = self.wm.subject
         msg.attach(MIMEText(self.wm.gentxt.render(**data), 'plain'))
@@ -48,7 +50,12 @@ class MailIter:
 
         return message, recipients
 
+
 class WriteEmail:
+    """Template encapsulation for email writing
+
+    Can generate an iterator for all messages to be sent.
+    """
 
     def __init__(self, program, sender, subject,
                  tmplhtml='templates/mailtemplate.html',
@@ -94,25 +101,24 @@ class WriteEmail:
         """
         if target == 'corresponding':
             sendlist = [
-                (item, item.correspondingEmail())
+                (item, item.correspondingEmails())
                  for item in self.program.items
             ]
         elif target == 'chairs':
             sendlist = [
-                (session, session.chairEmail())
+                (session, session.chairEmails())
                  for session in self.program.sessions.values()
-                 if session.chairEmail()
+                 if session.chairEmails()
             ]
         elif target == 'chairgroup':
             print(self.program)
             print(self.program.sessions)
             sendlist = [
-                (session, session.authorEmails()+[session.chairEmail()])
+                (session, session.authorEmails()+session.chairEmails())
                  for session in self.program.sessions.values()
+                 if session.chairEmails()
             ]
         else:
             raise ValueError(f'Cannot send mails to group {target}')
-
         return MailIter(self, sendlist)
-
 
