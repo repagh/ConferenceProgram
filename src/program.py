@@ -6,13 +6,11 @@ Created on Thu Feb  9 10:40:39 2023
 @author: repa
 """
 
-import openpyxl
 from authorparse import Author, AuthorList
-from datetime import date, time, timedelta, datetime
+from datetime import time, datetime
 from spreadbook import BookOfSheets
 from emailaddress import EmailAddress, parseEmails
 import re
-import html
 
 
 class Item:
@@ -52,7 +50,8 @@ class Item:
             self._session = [program.sessions[s] for s in self.session]
         except Exception:
             raise ValueError(
-                f"Item: check items row {row}, cannot find session {self.session}")
+                f"Item: check items row {row}, cannot find session"
+                f" {self.session}")
         for s in self._session:
             s._items.append(self)
 
@@ -91,7 +90,10 @@ class Item:
             recipientname=self.corresponding,
             title=self.title,
             time=' and on '.join(
-                [f"{s._event.printDay()} at {s._event.printStart()}" for s in self._session]),
+                [
+                    f"{s._event.printDay()} at {s._event.printStart()}"
+                    for s in self._session
+                ]),
             session=' and in session'.join([
                 f"{s._event.title}: {s._event._session.title}"
                 for s in self._session]),
@@ -106,10 +108,10 @@ class Item:
 
     def correspondingAuthors(self):
         if self.presenter:
-            return (EmailAddress(self.corresponding, self.email),
-                    EmailAddress(self.presenter))
+            return [EmailAddress(self.corresponding, self.email),
+                    EmailAddress(self.presenter)]
         else:
-            return (EmailAddress(self.corresponding, self.email), )
+            return [EmailAddress(self.corresponding, self.email), ]
 
 
 def daysort(e):
@@ -118,7 +120,7 @@ def daysort(e):
         ses = e.event
         return _dayvalue[ses[:3]] + 10*int(ses[4]) + \
             ((len(ses) == 6) and (ord(ses[5])-ord('a')) or 0)
-    except:
+    except Exception:
         return 0
 
 
@@ -145,7 +147,7 @@ class TimeSlot:
         return sorted([e for k, e in self.events.items()], key=daysort)
 
 
-_timeparse = re.compile('([0-9]{1,2}):([0-9]{2})\s?(AM|PM)?')
+_timeparse = re.compile(r'([0-9]{1,2}):([0-9]{2})\s?(AM|PM)?')
 
 
 def makeTime(day, t):
@@ -273,8 +275,9 @@ class Session:
             self._event = event
             event._session = self
         except KeyError:
-            raise KeyError(f"Cannot find event {self.event} for session {self.session}"
-                           f", check event in row {row}")
+            raise KeyError(
+                f"Cannot find event {self.event} for session {self.session}"
+                f", check event in row {row}")
         self._items = []
 
     def __str__(self):
@@ -299,7 +302,8 @@ class Session:
             sessiontitle=self.title,
             chairperson=self.chair,
             chair_email=self.chair_email,
-            dayandtime=f"{self._event.printDay()} at {self._event.printStart()}",
+            dayandtime=f"{self._event.printDay()} at"
+                       f" {self._event.printStart()}",
             items=[dict(authors=it.printAuthors(),
                         title=it.title,
                         corresponding=it.correspondingAuthors())
@@ -367,7 +371,7 @@ class Program:
     def __init__(self, file, title=''):
         self.title = title
 
-        #book = openpyxl.load_workbook(file)
+        # read the file or online sheet
         book = BookOfSheets(file)
 
         # prepare for filling

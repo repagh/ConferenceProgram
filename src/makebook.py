@@ -14,7 +14,11 @@ from programmail import WriteEmail
 import argparse
 import os
 import sys
-import getpass, smtplib, ssl, mailbox, imaplib
+import getpass
+import smtplib
+import ssl
+import mailbox
+import imaplib
 import time
 
 # find the current file's folder, for finding templates and the like
@@ -40,6 +44,10 @@ parser.add_argument(
                * title    Title of the item/contribution
                * author_list List of authors, separated by "," or newline
                * abstract Abstract, or statement/description
+               * corresponding Corresponding author
+               * email    Email of the corresponding author
+               * presenter Name+email of presenter, if different
+
 
     - sessions Parts of the conference. First row identifies the contents
                * session  ID for the session (matches items/events tables)
@@ -51,6 +59,8 @@ parser.add_argument(
                           the format, a specific parallel session layout will
                           be generated. The format strings can be used to
                           select css classes.
+               * chair    Name of the program chair(s)
+               * chair_email Email(s) of the program chairs
 
     - events   Time schedule of the conference. First row identifies the
                contents.
@@ -68,6 +78,7 @@ parser.add_argument(
     ''')
 
 subparsers = parser.add_subparsers(help='commands', title='Commands')
+
 
 class ProgramPdf:
 
@@ -129,6 +140,8 @@ class ProgramPdf:
             writer.authorList(outfile, template=author_template, css=css)
         except AttributeError:
             pass
+
+
 ProgramPdf.args(subparsers)
 
 
@@ -184,7 +197,11 @@ class ProgramHtml:
             ns.authorout.close()
         except AttributeError:
             pass
+
+
+# Add this option to the argument parser
 ProgramHtml.args(subparsers)
+
 
 class ProgramDocx:
 
@@ -221,7 +238,11 @@ class ProgramDocx:
             writer.authorList(outfile)
         except AttributeError:
             pass
+
+
+# add this option to the argument parser
 ProgramDocx.args(subparsers)
+
 
 class ProgramEmail:
 
@@ -234,9 +255,10 @@ class ProgramEmail:
             help="Send or create e-mails to corresponding authors")
         parser.add_argument(
             "--target", choices=("corresponding", "chairs", "chairgroup"),
-            default="corresponding", 
+            default="corresponding",
             help="Address to type: corresponding - each item in the program\n"
-                 "chairs - chairpersons, once per chair, chairgroup - chairs+authors")
+                 "chairs - chairpersons, once per chair,"
+                 " chairgroup - chairs+authors")
         parser.add_argument(
             "--smtp-server", type=str,
             help="SMTP Email server, for sending the emails")
@@ -301,23 +323,25 @@ class ProgramEmail:
             mbox = mailbox.mbox(mbname)
 
         # Run through all mails, and save, send, save to imap
-        for message, recipient in writer.mails(ns.target):
-            print("to", recipient)
-            if ns.outfile:
-                mkey = mbox.add(message)
-                print("added message", mkey)
-            if server:
-                server.sendmail(ns.email, recipient, message)
-            if imap:
-                res = imap.append('Sent', r'(\Seen)',
-                                  imaplib.Time2Internaldate(time.time()),
-                                  message.encode('utf8'))
-                if res[0] != 'OK':
-                    print("Could not append message to Sent folder", res)
+        for message, recipients in writer.mails(ns.target):
+            for recip in recipients:
+                print("to", recip)
+                if ns.outfile:
+                    mkey = mbox.add(message)
+                    print("added message", mkey)
+                if server:
+                    server.sendmail(ns.email, recip.mail, message)
+                if imap:
+                    res = imap.append('Sent', r'(\Seen)',
+                                      imaplib.Time2Internaldate(time.time()),
+                                      message.encode('utf8'))
+                    if res[0] != 'OK':
+                        print("Could not append message to Sent folder", res)
 
         server and server.quit()
         imap and imap.logout()
         ns.outfile and mbox.close()
+
 
 ProgramEmail.args(subparsers)
 
@@ -329,8 +353,7 @@ argvdef = (
     '--outfile=Nonsense.mbox',
     '--email=M.M.vanPaassen@TUDelft.nl',
     '--testmail=rene_vanpaassen@yahoo.com'
-    )
-
+)
 
 
 if __name__ == '__main__':

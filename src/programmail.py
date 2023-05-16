@@ -5,7 +5,7 @@ Created on Sat Feb 11 08:49:33 2023
 
 @author: repa
 """
-from emailaddress import addressEmails
+from emailaddress import addressEmails, EmailAddress
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from jinja2 import Environment, PackageLoader, \
@@ -14,15 +14,13 @@ from jinja2 import Environment, PackageLoader, \
 # create an environment for jinja loading
 environment = Environment(
     loader=PackageLoader("programmail", 'templates')
-    )
+)
 
 
 class MailIter:
 
     def __init__(self, wm, sendlist):
         """Produce an email iterator
-
-        This 
 
         Arguments:
             wm -- _description_
@@ -35,20 +33,29 @@ class MailIter:
         return self
 
     def __next__(self):
+        """Produce next mail message and its recipients
+
+        Returns
+        -------
+        tuple[str, Iterable[EmailAddress]]
+            Formatted message and list of recipients
+        """
         it = next(self.ix)
         data = it[0].getFieldDetails()
 
-        recipients = (self.wm.testmail,) or it[1]
+        recipient = self.wm.testmail or it[1]
+        data['recipient'] = recipient.name
+        print(f"message to recipients {recipient}")
         msg = MIMEMultipart('alternative')
         msg['From'] = self.wm.sender
-        msg['To'] = addressEmails(recipients)
+        msg['To'] = addressEmails((recipient,))
         msg['Cc'] = self.wm.sender
         msg['Subject'] = self.wm.subject
         msg.attach(MIMEText(self.wm.gentxt.render(**data), 'plain'))
         msg.attach(MIMEText(self.wm.genhtml.render(**data), 'html'))
         message = msg.as_string()
 
-        return message, recipients
+        return message, recipient
 
 
 class WriteEmail:
@@ -61,24 +68,30 @@ class WriteEmail:
                  tmplhtml='templates/mailtemplate.html',
                  tmpltxt='templates/mailtemplate.txt',
                  testmail=None):
-        """Email writer class
+        """Email Writer class
 
-        Args:
-            program (Program): Program data
-            sender (str): e-mail address of sender
-            subject (str): Topic line
-            tmplhtml (str|file, optional): template for the html-formatted message. 
-                                           Defaults to 'templates/mailtemplate.html'.
-            tmpltxt (str|file, optional): template for the txt-formatted part of the message. Defaults to 'templates/mailtemplate.txt'.
-            testmail (None|str, optional): destination e-mail address for test mails. Defaults to None.
+        Parameters
+        ----------
+        program : Program
+            Program object with information on sessions, items, etc.
+        sender : str
+            Sender e-mail address
+        subject : str
+            Subject line
+        tmplhtml : [str,file], optional
+            html template by default 'templates/mailtemplate.html'
+        tmpltxt : [str,file] optional
+            plaintext template, by default 'templates/mailtemplate.txt'
+        testmail : str, optional
+            test e-mail recipient, by default None
         """
 
         self.program = program
         self.sender = sender
         self.subject = subject
-        self.testmail = testmail
+        self.testmail = testmail and EmailAddress(testmail)
         if isinstance(tmpltxt, str):
-            self.gentxt = environment.get_template(tmppltxt)
+            self.gentxt = environment.get_template(tmpltxt)
         else:
             self.gentxt = Template(tmpltxt.read())
         if isinstance(tmplhtml, str):
@@ -92,33 +105,28 @@ class WriteEmail:
         """Generate an interator for all mails to send
 
         Arguments:
-            target -- Type of recipients, corresponding authors, session chairs 
-            or a combination, with groups of session chair and authors as
-            recipients
+            target -- Type of recipients, corresponding authors, session
+            chairs or a combination, with groups of session chair and
+            authors as recipients
 
         Returns:
             MailIter iterator
         """
+        sendlist = []
         if target == 'corresponding':
-            sendlist = [
-                (item, item.correspondingEmails())
-                 for item in self.program.items
-            ]
+            for item in self.program.getAssignedItems():
+                for corresp in item.correspondingEmails():
+                    sendlist.append((item, corresp))
         elif target == 'chairs':
-            sendlist = [
-                (session, session.chairEmails())
-                 for session in self.program.sessions.values()
-                 if session.chairEmails()
-            ]
+            for session in self.program.sessions.values():
+                for chair in session.chairEmails():
+                    sendlist.append((session, chair))
         elif target == 'chairgroup':
-            print(self.program)
-            print(self.program.sessions)
-            sendlist = [
-                (session, session.authorEmails()+session.chairEmails())
-                 for session in self.program.sessions.values()
-                 if session.chairEmails()
-            ]
+            for session in self.program.sessions.values():
+                for author in session.authorEmails():
+                    sendlist.append(session, author)
+                for chair in session.chairEmails():
+                    sendlist.append(session, chair)
         else:
             raise ValueError(f'Cannot send mails to group {target}')
         return MailIter(self, sendlist)
-

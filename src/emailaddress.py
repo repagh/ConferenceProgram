@@ -1,17 +1,14 @@
+from collections.abc import Iterable
 import pyparsing as pp
 import html
-import sys
-from collections.abc import Iterable
 
-#unicodePrintables = u''.join(chr(c) for c in range(sys.maxunicode) 
-#                                        if not chr(c).isspace())
+# parsing rule for email addresses
 _mailaddress = pp.Regex(r"[a-zA-Z0-9._%+-]+@(?:[a-zA-Z0-9-]+\.)+[a-zA-Z]{2,6}")
-#_mailname = pp.OneOrMore(pp.Word(unicodePrintables,excludeChars='<'))
-#_nameandmail = _mailname + \
-#    pp.Literal('<') + _mailaddress + pp.Literal('>')
 
 
 class EmailAddress:
+    """Name and email address type
+    """
 
     def __init__(self, *args):
         """Create/parse name + email address combination
@@ -21,7 +18,7 @@ class EmailAddress:
             First argument is name, second email
 
         -- emailstring
-            Parsed for "name <email@org.x>", 
+            Parsed for "name <email@org.x>",
             otherwise parsed as email address
         """
         if len(args) == 2 and args[1]:
@@ -29,12 +26,13 @@ class EmailAddress:
             try:
                 self.name = args[0]
                 self.email = _mailaddress.parse_string(args[1], True)[0]
-            except:
+            except pp.ParseException:
                 raise ValueError(f"Cannot get email address from {args[1]}")
 
         # no person, no email email address, return None
         elif not args[0]:
-            return None
+            self.name = ''
+            self.email = None
 
         # try to parse email address and name from args[0]
         elif '<' in args[0] and args[0].strip()[-1] == '>':
@@ -42,7 +40,7 @@ class EmailAddress:
                 self.name = html.unescape(args[0].split('<')[0].strip())
                 self.email = _mailaddress.parse_string(
                     args[0].split('<')[1][:-1].strip())
-            except:
+            except pp.ParseException:
                 raise ValueError(f"Cannot get email address from {args[0]}")
         else:
             raise ValueError(f"Cannot get email address from {args[0]}")
@@ -51,7 +49,7 @@ class EmailAddress:
 
         if self.name:
             return f"{html.escape(self.name)} <{self.email}>"
-        return self.email
+        return self.email or ''
 
     def getEmail(self):
         return self.email
@@ -59,13 +57,14 @@ class EmailAddress:
 
 def parseEmails(*args, single=False):
     res = []
+    print(f"parsing emails from {args}")
 
     if args[0] is None:
         args = ('', *args[1:])
 
     # here, assume the e-mail is in the args[1]
     if len(args) == 2 and args[1]:
-        
+
         # Equal number of names and email addresses
         if args[0].count(',') == args[1].count(','):
             for name, email in zip(args[0].split(','), args[1].split(',')):
@@ -84,7 +83,10 @@ def parseEmails(*args, single=False):
     else:
         for name_email in args[0].split(','):
             res.append(EmailAddress(name_email))
-    
+
+    for i, r in enumerate(res):
+        print(f"email {i} parse results {r}")
+
     # return only the first name/email
     if single and res:
         if len(res) > 1:
@@ -94,5 +96,18 @@ def parseEmails(*args, single=False):
         return None
     return res
 
+
 def addressEmails(mails: Iterable[EmailAddress]):
+    """Convert email into printable string
+
+    Parameters
+    ----------
+    mails : Iterable[EmailAddress]
+        Mails to convert
+
+    Returns
+    -------
+    str
+        Comma-separated list of name+email address
+    """
     return ', '.join(map(str, mails))
