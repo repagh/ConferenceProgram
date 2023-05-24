@@ -19,8 +19,9 @@ unicodePrintables = u''.join(chr(c) for c in range(512)
 
 
 def dprint(*argv, **argkw):
-    #print(*argv, **argkw)
+    # print(*argv, **argkw)
     pass
+
 
 # functions to assemble different parts
 
@@ -110,7 +111,7 @@ def daysort(ses):
     try:
         return _dayvalue[ses[:3]] + 10*int(ses[4]) + \
             ((len(ses) == 6) and (ord(ses[5])-ord('a')) or 0)
-    except:
+    except Exception:
         return 0
 
 
@@ -186,7 +187,7 @@ class Author:
             try:
                 del program.authors[(obj.lastname, obj.firstname, None)]
                 program.authors[(obj.lastname, obj.firstname, obj.orcid)] = obj
-                print(f"Adding orcid to author {str(obj)}")
+                # print(f"Adding orcid to author {str(obj)}")
             except KeyError:
                 pass
         return obj

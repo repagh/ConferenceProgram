@@ -11,15 +11,22 @@ from datetime import time, datetime
 from spreadbook import BookOfSheets
 import itertools
 import sys
+from emailaddress import EmailAddress, parseEmails
 import re
 
 
 class Item:
+    """Read from the sheet an item; presentation, poster, contribution
+       or similar
 
-    _members = ('item', 'title', 'abstract',
-                'email', 'corresponding', 'session')
-    _required = ('author_list', 'item', 'title',
-                 'email', 'corresponding', 'session')
+    Raises:
+        ValueError: Data lacking from the sheet, will skil a row
+    """
+
+    _members = ('item', 'title', 'abstract', 'email', 'corresponding',
+                'session', 'presenter', 'requested_format')
+    _required = ('author_list', 'item', 'title', 'email', 'corresponding',
+                 'session')
 
     def __init__(self, row, data, program):
 
@@ -31,8 +38,11 @@ class Item:
 
         # these are directly coupled, make empty string cells void
         for m in Item._members:
-            v = str(data[m])
-            if v is not None and v.strip() == '':
+            if isinstance(data[m], str) and data[m].strip() == '':
+                v = None
+            elif data[m] is not None:
+                v = str(data[m])
+            else:
                 v = None
             setattr(self, m, v)
 
@@ -44,16 +54,19 @@ class Item:
         self._session = []
         try:
             self._session = [program.sessions[s] for s in self.session]
-        except:
+
+        except Exception:
             raise ValueError(
-                f"Item: check items row {row}, cannot find session {self.session}")
+                f"Item: check items row {row}, cannot find session"
+                f" {self.session}")
+
         for s in self._session:
             s._items.append(self)
 
         # find, if needed create the authors.
         try:
             self.authors = list(AuthorList(data['author_list'], program))
-        except:
+        except Exception:
             print(f"Cannot get authors from author_list in row {row}")
             self.authors = [Author(dict(firstname='', lastname='Anonymous'),
                                    program)]
@@ -85,9 +98,14 @@ class Item:
             recipientname=self.corresponding,
             title=self.title,
             daysandtimes=' and on '.join(
-                [f"{s._event.printDay()} at {s._event.printStart()}" for s in self._session]),
+                [f"{s._event.printDay()} at {s._event.printStart()}"
+                 for s in self._session]),
             day=', '.join([s._event.printDayFull() for s in self._session]),
-            time=', '.join([s._event.printStart() for s in self._session]),
+            time=' and on '.join(
+                [
+                    f"{s._event.printDay()} at {s._event.printStart()}"
+                    for s in self._session
+                ]),
             session=' and in session'.join([
                 f"{s._event.title}: {s._event._session.title}"
                 for s in self._session]),
@@ -102,6 +120,19 @@ class Item:
                    if s.chair and s.chair_email and s._event._session.title],
         )
 
+    def correspondingAuthors(self):
+        if self.presenter:
+            return [EmailAddress(self.corresponding, self.email),
+                    EmailAddress(self.presenter)]
+        else:
+            return [EmailAddress(self.corresponding, self.email), ]
+
+    def getFormats(self):
+        res = set()
+        for f in self._session.getFormats():
+            res = res or f
+        return res
+
 
 def daysort(e):
     _dayvalue = dict(wed=300, thu=400, fri=500, sat=600)
@@ -109,7 +140,7 @@ def daysort(e):
         ses = e.event
         return _dayvalue[ses[:3]] + 10*int(ses[4]) + \
             ((len(ses) == 6) and (ord(ses[5])-ord('a')) or 0)
-    except:
+    except Exception:
         return 0
 
 
@@ -136,7 +167,7 @@ class TimeSlot:
         return sorted([e for k, e in self.events.items()], key=daysort)
 
 
-_timeparse = re.compile('([0-9]{1,2}):([0-9]{2})\s?(AM|PM)?')
+_timeparse = re.compile(r'([0-9]{1,2}):([0-9]{2})\s?(AM|PM)?')
 
 
 def makeTime(day, t):
@@ -267,8 +298,9 @@ class Session:
             self._event = event
             event._session = self
         except KeyError:
-            raise KeyError(f"Cannot find event {self.event} for session {self.session}"
-                           f", check event in row {row}")
+            raise KeyError(
+                f"Cannot find event {self.event} for session {self.session}"
+                f", check event in row {row}")
         self._items = []
 
     def __str__(self):
@@ -282,6 +314,34 @@ class Session:
         for i in self._items:
             res |= set(i.authors)
         return res
+
+    def chairEmails(self):
+        return parseEmails(self.chair, self.chair_email)
+
+    def authorEmails(self):
+        res = []
+        for it in self._items:
+            res.append(EmailAddress(it.corresponding, it.email))
+            if it.presenter:
+                res.append(EmailAddress(it.presenter))
+        return res
+
+    def getFieldDetails(self):
+        return dict(
+            sessiontitle=self.title,
+            chairperson=self.chair,
+            chair_email=self.chair_email,
+            dayandtime=f"{self._event.printDay()} at"
+                       f" {self._event.printStart()}",
+            items=[dict(authors=it.printAuthors(),
+                        title=it.title,
+                        corresponding=it.correspondingAuthors())
+                   for it in self._items],
+            poster=('POSTER' in self.format),
+        )
+
+    def getFormats(self):
+        return set(self.format.split())
 
 
 class Day:
@@ -343,7 +403,7 @@ class Program:
     def __init__(self, file, title='', check_overlap=True):
         self.title = title
 
-        #book = openpyxl.load_workbook(file)
+        # read the file or online sheet
         book = BookOfSheets(file)
 
         # prepare for filling
@@ -409,14 +469,16 @@ class Program:
                     common_authors = s1[1].intersection(s2[1])
                     if common_authors:
                         ca = ' and '.join([str(a) for a in common_authors])
-                        print(f"Authors for parallel events {s1[0]} and {s2[0]} overlap\n",
-                              f"common authors: {ca}", file=sys.stderr)
+                        print(f"Authors for events {s1[0]} and {s2[0]}",
+                              f" overlap\n common authors: {ca}", 
+                              file=sys.stderr)
 
 
 if __name__ == '__main__':
 
     pr = Program(
-        '../../../TUDelft/community/ISAP2023/ISAP 2023 shedule data230417b.xlsx')
+        '../../../TUDelft/community/ISAP2023/'
+        'ISAP 2023 shedule data230417b.xlsx')
     kl = sorted(pr.authors.keys(), key=lambda s: s[0].casefold())
     for ak in kl:
         print(ak, pr.authors[ak]._items)

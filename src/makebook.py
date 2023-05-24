@@ -44,6 +44,10 @@ parser.add_argument(
                * title    Title of the item/contribution
                * author_list List of authors, separated by "," or newline
                * abstract Abstract, or statement/description
+               * corresponding Corresponding author
+               * email    Email of the corresponding author
+               * presenter Name+email of presenter, if different
+
 
     - sessions Parts of the conference. First row identifies the contents
                * session  ID for the session (matches items/events tables)
@@ -55,6 +59,8 @@ parser.add_argument(
                           the format, a specific parallel session layout will
                           be generated. The format strings can be used to
                           select css classes.
+               * chair    Name of the program chair(s)
+               * chair_email Email(s) of the program chairs
 
     - events   Time schedule of the conference. First row identifies the
                contents.
@@ -193,6 +199,7 @@ class ProgramHtml:
             pass
 
 
+# Add this option to the argument parser
 ProgramHtml.args(subparsers)
 
 
@@ -233,6 +240,7 @@ class ProgramDocx:
             pass
 
 
+# add this option to the argument parser
 ProgramDocx.args(subparsers)
 
 
@@ -245,6 +253,16 @@ class ProgramEmail:
         parser = subparsers.add_parser(
             cls.command,
             help="Send or create e-mails to corresponding authors")
+        parser.add_argument(
+            "--target", choices=("corresponding", "chairs", "chairgroup"),
+            default="corresponding",
+            help="Address to type: corresponding - each item in the program\n"
+                 "chairs - chairpersons, once per chair,"
+                 " chairgroup - chairs+authors")
+        parser.add_argument(
+            "--format", default='',
+            help="Select on presentation format, as given in the session\n"
+            "column")
         parser.add_argument(
             "--smtp-server", type=str,
             help="SMTP Email server, for sending the emails")
@@ -308,14 +326,14 @@ class ProgramEmail:
             ns.outfile.close()
             mbox = mailbox.mbox(mbname)
 
-        # if we have an outfile
-        for message, recipient in writer.mails():
+        # Run through all mails, and save, send, save to imap
+        for message, recipient in writer.mails(ns.target, ns.format or None):
             print("to", recipient)
             if ns.outfile:
                 mkey = mbox.add(message)
                 print("added message", mkey)
             if server:
-                server.sendmail(ns.email, recipient, message)
+                server.sendmail(ns.email, recipient.email, message)
             if imap:
                 res = imap.append('Sent', r'(\Seen)',
                                   imaplib.Time2Internaldate(time.time()),
