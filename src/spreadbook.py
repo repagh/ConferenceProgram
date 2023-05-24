@@ -1,5 +1,12 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
+
+import gspread
+import pandas as pd
+import numpy as np
+import os
+import sys
+
 """
 Created on Thu Feb 23 09:10:46 2023
 
@@ -10,12 +17,6 @@ Created on Thu Feb 23 09:10:46 2023
 For opening a spreadsheet with gspread google API:
 https://codesolid.com/google-sheets-in-python-and-pandas/
 """
-
-import gspread
-import pandas as pd
-import numpy as np
-import os
-import sys
 
 
 class BookOfSheets:
@@ -68,7 +69,7 @@ class BookOfSheets:
             return
         rows = len(data)
         cols = len(data[0])
-        if name in [ sh.title for sh in self.book.worksheets()]:
+        if name in [sh.title for sh in self.book.worksheets()]:
             print(f"A sheet named {name} already exists, not overwriting",
                   file=sys.stderr)
         ws = self.book.add_worksheet(title=name, rows=rows, cols=cols)

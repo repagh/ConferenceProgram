@@ -4,14 +4,6 @@
     // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
     "version": "0.2.0",
     "configurations": [
-        {
-            "name": "Python: Current File",
-            "type": "python",
-            "request": "launch",
-            "program": "${file}",
-            "console": "integratedTerminal",
-            "justMyCode": true
-        },
         {   
             "name": "Python: sessionmail",
             "type": "python",
@@ -27,6 +19,20 @@
                 "--email=M.M.vanPaassen@TUDelft.nl",
                 "--html-template=/home/repa/TUDelft/community/ISAP2023/templates/mailtemplate-session01.html",
                 "--txt-template=/home/repa/TUDelft/community/ISAP2023/templates/mailtemplate-session01.txt"
+            ],
+            "console": "integratedTerminal",
+            "justMyCode": true
+        },
+        {   
+            "name": "Python: sheet",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/makebook.py",
+            "args": [
+                "--program=ISAP 2023 schedule data",
+                "--title=Test Title",
+                "sheet",
+                "--accountfile=${userHome}/TUDelft/community/ISAP2023/service_account.json"
             ],
             "console": "integratedTerminal",
             "justMyCode": true

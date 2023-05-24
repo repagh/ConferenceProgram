@@ -349,6 +349,7 @@ class ProgramEmail:
 
 ProgramEmail.args(subparsers)
 
+
 class ProgramSheet:
 
     command = 'sheet'
@@ -374,7 +375,9 @@ class ProgramSheet:
         # write the events
         writer.eventList(ns.title)
 
+
 ProgramSheet.args(subparsers)
+
 
 # default arguments
 argvdef = (
