@@ -16,7 +16,7 @@ import re
 class Item:
 
     _members = ('item', 'title', 'abstract', 'email', 'corresponding',
-                'session', 'presenter')
+                'session', 'presenter', 'requested_format')
     _required = ('author_list', 'item', 'title', 'email', 'corresponding',
                  'session')
 
@@ -36,8 +36,6 @@ class Item:
                 v = str(data[m])
             else:
                 v = None
-            if m == 'presenter':
-                print(f"setting presenter {v} for {self.item}")
             setattr(self, m, v)
 
         # an item may be presented in multiple sessions, for example the
@@ -112,6 +110,12 @@ class Item:
                     EmailAddress(self.presenter)]
         else:
             return [EmailAddress(self.corresponding, self.email), ]
+
+    def getFormats(self):
+        res = set()
+        for f in self._session.getFormats():
+            res = res or f
+        return res
 
 
 def daysort(e):
@@ -310,6 +314,9 @@ class Session:
                    for it in self._items],
             poster=('POSTER' in self.format),
         )
+
+    def getFormats(self):
+        return set(self.format.split())
 
 
 class Day:

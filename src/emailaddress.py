@@ -1,6 +1,5 @@
 from collections.abc import Iterable
 import pyparsing as pp
-import html
 
 # parsing rule for email addresses
 _mailaddress = pp.Regex(r"[a-zA-Z0-9._%+-]+@(?:[a-zA-Z0-9-]+\.)+[a-zA-Z]{2,6}")
@@ -37,18 +36,22 @@ class EmailAddress:
         # try to parse email address and name from args[0]
         elif '<' in args[0] and args[0].strip()[-1] == '>':
             try:
-                self.name = html.unescape(args[0].split('<')[0].strip())
+                self.name = args[0].split('<')[0].strip()
                 self.email = _mailaddress.parse_string(
                     args[0].split('<')[1][:-1].strip())
             except pp.ParseException:
                 raise ValueError(f"Cannot get email address from {args[0]}")
         else:
-            raise ValueError(f"Cannot get email address from {args[0]}")
+            try:
+                self.email = _mailaddress.parse_string(args[0], True)[0]
+                self.name = self.email
+            except pp.ParseException:
+                raise ValueError(f"Cannot get email address from {args[0]}")
 
     def __str__(self):
 
         if self.name:
-            return f"{html.escape(self.name)} <{self.email}>"
+            return f"{self.name} <{self.email}>"
         return self.email or ''
 
     def getEmail(self):
@@ -57,7 +60,6 @@ class EmailAddress:
 
 def parseEmails(*args, single=False):
     res = []
-    print(f"parsing emails from {args}")
 
     if args[0] is None:
         args = ('', *args[1:])
@@ -83,9 +85,6 @@ def parseEmails(*args, single=False):
     else:
         for name_email in args[0].split(','):
             res.append(EmailAddress(name_email))
-
-    for i, r in enumerate(res):
-        print(f"email {i} parse results {r}")
 
     # return only the first name/email
     if single and res:

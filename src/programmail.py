@@ -44,8 +44,10 @@ class MailIter:
         data = it[0].getFieldDetails()
 
         recipient = self.wm.testmail or it[1]
-        data['recipient'] = recipient.name
+        data['recipientname'] = recipient.name
         print(f"message to recipients {recipient}")
+        print("recipientname", data['recipientname'],
+              "chairperson", data.get('chairperson', 'not known'))
         msg = MIMEMultipart('alternative')
         msg['From'] = self.wm.sender
         msg['To'] = addressEmails((recipient,))
@@ -101,7 +103,7 @@ class WriteEmail:
 
         self.items = program.getAssignedItems()
 
-    def mails(self, target: str):
+    def mails(self, target: str, formatselect=None):
         """Generate an interator for all mails to send
 
         Arguments:
@@ -115,18 +117,24 @@ class WriteEmail:
         sendlist = []
         if target == 'corresponding':
             for item in self.program.getAssignedItems():
-                for corresp in item.correspondingEmails():
-                    sendlist.append((item, corresp))
+                if formatselect is None or \
+                        formatselect in item.getFormats():
+                    for corresp in item.correspondingEmails():
+                        sendlist.append((item, corresp))
         elif target == 'chairs':
             for session in self.program.sessions.values():
-                for chair in session.chairEmails():
-                    sendlist.append((session, chair))
+                if formatselect is None or \
+                        formatselect in session.getFormats():
+                    for chair in session.chairEmails():
+                        sendlist.append((session, chair))
         elif target == 'chairgroup':
             for session in self.program.sessions.values():
-                for author in session.authorEmails():
-                    sendlist.append(session, author)
-                for chair in session.chairEmails():
-                    sendlist.append(session, chair)
+                if formatselect is None or \
+                        formatselect in session.getFormats():
+                    for author in session.authorEmails():
+                        sendlist.append((session, author))
+                    for chair in session.chairEmails():
+                        sendlist.append((session, chair))
         else:
             raise ValueError(f'Cannot send mails to group {target}')
         return MailIter(self, sendlist)

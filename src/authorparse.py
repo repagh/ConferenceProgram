@@ -15,34 +15,49 @@ ParserElement.setDefaultWhitespaceChars(' \t')
 # ensure we parse most accented names
 unicodePrintables = u''.join(chr(c) for c in range(512)
                              if chr(c).isalpha() or chr(c) == "'" or
-                             chr(c) =='-' or chr(c) == '_')
+                             chr(c) == '-' or chr(c) == '_')
+
 
 def dprint(*argv, **argkw):
-    #print(*argv, **argkw)
+    # print(*argv, **argkw)
     pass
+
 
 # functions to assemble different parts
 def setFirst(toks):
     toks['firstname'] = ' '.join(toks)
     dprint(f"firstname {toks}")
+
+
 def setLast(toks):
     toks['lastname'] = ' '.join(toks)
     dprint(f"lastname {toks}")
+
+
 def setLastCap(toks):
     toks['lastname'] = toks[0].capitalize()
     dprint(f"lastname {toks[0].capitalize()}")
+
+
 def setTitle(toks):
     toks['titlepre'] = toks[0]
     dprint(f"titlepre {toks}")
+
+
 def setTitle2(toks):
     toks['titlepost'] = toks[0]
     dprint(f"titlepost {toks}")
+
+
 def setAffiliation(toks):
     toks['affiliation'] = ' '.join(toks)
     dprint(f"rest {toks}")
+
+
 def completeAuthor(toks):
     toks['author'] = Author(toks)
     dprint(f"complete {toks} {list(toks.keys())}")
+
 
 # parsing tokens and language
 titlepre = oneOf(('Dr', 'Dr.', 'Prof', 'Prof.', 'dr.', 'dr.ir.', 'Lt',
@@ -60,13 +75,15 @@ initial = Regex(r'([A-Z]\.)+')
 initials = (
     (OneOrMore(initial) +
      Opt(nickname) +
-     ZeroOrMore(initial)).set_parse_action(setFirst) | \
+     ZeroOrMore(initial)).set_parse_action(setFirst) |
     (ZeroOrMore(initial) +
      Opt(nickname) +
      OneOrMore(initial)).set_parse_action(setFirst))
 
-lastname = OneOrMore(Word(unicodePrintables, asKeyword=True)).set_parse_action(setLast)
-lastcaps = Word(alphas.upper(), min=2, asKeyword=True).set_parse_action(setLastCap)
+lastname = OneOrMore(Word(unicodePrintables, asKeyword=True)
+                     ).set_parse_action(setLast)
+lastcaps = Word(alphas.upper(), min=2,
+                asKeyword=True).set_parse_action(setLastCap)
 
 author = (lastcaps + firstname + Opt(titlepost)) | \
     (Opt(titlepre) + (initials | firstname) + lastname + Opt(titlepost))
@@ -80,18 +97,21 @@ author_line = (author + Opt(Literal(',') +
 author_lines = author_line + OneOrMore(LineEnd() + author_line)
 author_list = author + ZeroOrMore(separator + author)
 
+
 def printattr(o, attrib, pre='', post=' ', default=''):
     if hasattr(o, attrib):
         return pre + str(getattr(o, attrib)) + post
     return default
 
+
 def daysort(ses):
-    _dayvalue = dict(wed=300,thu=400,fri=500,sat=600)
+    _dayvalue = dict(wed=300, thu=400, fri=500, sat=600)
     try:
         return _dayvalue[ses[:3]] + 10*int(ses[4]) + \
             ((len(ses) == 6) and (ord(ses[5])-ord('a')) or 0)
-    except:
+    except Exception:
         return 0
+
 
 class Author:
 
@@ -165,11 +185,10 @@ class Author:
             try:
                 del program.authors[(obj.lastname, obj.firstname, None)]
                 program.authors[(obj.lastname, obj.firstname, obj.orcid)] = obj
-                print(f"Adding orcid to author {str(obj)}")
+                # print(f"Adding orcid to author {str(obj)}")
             except KeyError:
                 pass
         return obj
-
 
     def __str__(self):
         return f'{self.lastname}, {self.firstname}'
@@ -201,6 +220,7 @@ class Author:
             res.extend(it.getEvents())
         return sorted(res, key=daysort)
 
+
 class AuthorList(list):
 
     def __init__(self, text, program):
@@ -218,6 +238,7 @@ class AuthorList(list):
         dprint(f"list addition {dict(toks.items())}")
         self.append(Author(toks, self.program))
 
+
 class SingleAuthor(list):
 
     def __init__(self, text, program):
@@ -230,6 +251,7 @@ class SingleAuthor(list):
 
     def complete(self, toks):
         self.append(Author(toks, self.program))
+
 
 if __name__ == '__main__':
 
@@ -245,10 +267,9 @@ if __name__ == '__main__':
             'Lt. Col. Pedro Piedade',
             'René van Paassen',
             'OKINAWA John'
-            ):
+    ):
         res = author.parseString(test)
-        print (res)
-
+        print(res)
 
     res = author_lines.parseString('''Lt Nicholas Armendariz, MSC, USN, Naval Aerospace Medical Institute
        J. J. Walcutt, Ph.D., Clay Strategic Designs
@@ -270,4 +291,4 @@ if __name__ == '__main__':
             res = author_lines.parseString(test)
         else:
             res = author_list.parseString(test)
-        print (res)
+        print(res)

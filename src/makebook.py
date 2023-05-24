@@ -260,6 +260,10 @@ class ProgramEmail:
                  "chairs - chairpersons, once per chair,"
                  " chairgroup - chairs+authors")
         parser.add_argument(
+            "--format", default='',
+            help="Select on presentation format, as given in the session\n"
+            "column")
+        parser.add_argument(
             "--smtp-server", type=str,
             help="SMTP Email server, for sending the emails")
         parser.add_argument(
@@ -323,20 +327,19 @@ class ProgramEmail:
             mbox = mailbox.mbox(mbname)
 
         # Run through all mails, and save, send, save to imap
-        for message, recipients in writer.mails(ns.target):
-            for recip in recipients:
-                print("to", recip)
-                if ns.outfile:
-                    mkey = mbox.add(message)
-                    print("added message", mkey)
-                if server:
-                    server.sendmail(ns.email, recip.mail, message)
-                if imap:
-                    res = imap.append('Sent', r'(\Seen)',
-                                      imaplib.Time2Internaldate(time.time()),
-                                      message.encode('utf8'))
-                    if res[0] != 'OK':
-                        print("Could not append message to Sent folder", res)
+        for message, recipient in writer.mails(ns.target, ns.format or None):
+            print("to", recipient)
+            if ns.outfile:
+                mkey = mbox.add(message)
+                print("added message", mkey)
+            if server:
+                server.sendmail(ns.email, recipient.email, message)
+            if imap:
+                res = imap.append('Sent', r'(\Seen)',
+                                  imaplib.Time2Internaldate(time.time()),
+                                  message.encode('utf8'))
+                if res[0] != 'OK':
+                    print("Could not append message to Sent folder", res)
 
         server and server.quit()
         imap and imap.logout()
