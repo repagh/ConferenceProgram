@@ -11,6 +11,7 @@ from programhtml import WriteHTML
 from programpdf import WritePDF
 from programdocx import WriteDocx
 from programmail import WriteEmail
+from programsheet import WriteSheet
 import argparse
 import os
 import sys
@@ -109,7 +110,7 @@ class ProgramPdf:
     def __call__(self, ns):
 
         # process the program spec
-        program = Program(ns.program, ns.title)
+        program = Program(ns.program, title=ns.title)
 
         # figure out template arguments
         if ns.author_template is None:
@@ -171,7 +172,7 @@ class ProgramHtml:
     def __call__(self, ns):
 
         # process the program spec
-        program = Program(ns.program, ns.title)
+        program = Program(ns.program, title=ns.title)
 
         # figure out template arguments
         if ns.author_template is None:
@@ -347,6 +348,33 @@ class ProgramEmail:
 
 
 ProgramEmail.args(subparsers)
+
+class ProgramSheet:
+
+    command = 'sheet'
+
+    @classmethod
+    def args(cls, subparsers):
+        parser = subparsers.add_parser(
+            cls.command,
+            help="Add a datasheet to a google spreadsheet book")
+        parser.add_argument(
+            '--accountfile', type=str, default='',
+            help='Access through Google API')
+        parser.set_defaults(handler=cls)
+
+    def __call__(self, ns):
+
+        # process the program spec
+        program = Program(ns.program, accountfile=ns.accountfile)
+
+        # create a writer
+        writer = WriteSheet(program)
+
+        # write the events
+        writer.eventList(ns.title)
+
+ProgramSheet.args(subparsers)
 
 # default arguments
 argvdef = (

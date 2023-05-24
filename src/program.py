@@ -400,11 +400,10 @@ class Program:
               and a check on overlap for appearing in parallel sessions
     """
 
-    def __init__(self, file, title='', check_overlap=True):
+    def __init__(self, file, title='', accountfile='', check_overlap=True):
         self.title = title
 
-        # read the file or online sheet
-        book = BookOfSheets(file)
+        self.book = BookOfSheets(file, accountfile)
 
         # prepare for filling
         self.authors = dict()
@@ -412,21 +411,21 @@ class Program:
 
         # events dict is returned by the call, sorted by event id
         # this also fills the slots, keyed by slot start time
-        self.events = processSheet(book.events, Event, self)
+        self.events = processSheet(self.book.events, Event, self)
 
         # the sessions dict is returned by the processSheet call
         # a session is linked to an event, and thereby to a time slot
-        self.sessions = processSheet(book.sessions, Session, self)
+        self.sessions = processSheet(self.book.sessions, Session, self)
 
         # the items are linked to a session; they will be added to
         # the list of items there
-        self.items = processSheet(book.items, Item, self)
+        self.items = processSheet(self.book.items, Item, self)
 
         # read the full definitions from the authors tab for authors with
         # further details
         #
         # this may also further fill the authors dict
-        processSheet(book.authors, Author, self)
+        processSheet(self.book.authors, Author, self)
 
         # make an organization per day
         self.days = dict()

@@ -10,8 +10,23 @@
             "request": "launch",
             "program": "${file}",
             "console": "integratedTerminal",
-            "justMyCode": true,
-            "cwd": "${workspaceFolder}/src"
+            "justMyCode": true
+        },
+        {
+            "name": "Python: makebook.py",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/makebook.py",
+            "args": [
+                "--program=1kg8GQnJvyT8vmpLibgRernYgnokbrILXI0UWlIIX5tE",
+                "--title=Test title",
+                "email",
+                "--target=chairgroup",
+                "--outfile=/tmp/ISAP-program.mbox",
+                "--email=M.M.vanPaassen@tudelft.nl",
+                "--html-template=${userHome}/TUDelft/community/ISAP2023/templates/mailtemplate-session01.html",
+                "--txt-template=${userHome}/TUDelft/community/ISAP2023/templates/mailtemplate-session01.txt"
+             ]
         }
     ]
 }
