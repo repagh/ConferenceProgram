@@ -11,6 +11,7 @@ import pandas as pd
 import numpy as np
 import os
 
+
 class BookOfSheets:
 
     def __init__(self, url, accountfile=''):
@@ -37,8 +38,8 @@ class BookOfSheets:
                 setattr(self, s, pd.read_csv(
                     f'{url}/gviz/tq?tqx=out:csv&sheet={s}').
                     replace(np.nan, None))
-            self.events['day'] = pd.to_datetime(self.events['day'], 
-                                                dayfirst=True)            
+            self.events['day'] = pd.to_datetime(self.events['day'],
+                                                dayfirst=True)
 
         else:
 
@@ -54,4 +55,5 @@ if __name__ == '__main__':
     base = os.path.dirname(__file__)
     b1 = BookOfSheets(f'{base}/../example/exampledata.xlsx')
     sheet_id = '1bfvtA3tBdtqd_M8TpKA1pY_vuov1SiMdtywJ8G20lw0'
-    b2 = BookOfSheets(f'https://docs.google.com/spreadsheets/d/{sheet_id}/edit?usp=sharing')
+    b2 = BookOfSheets(
+        f'https://docs.google.com/spreadsheets/d/{sheet_id}/edit?usp=sharing')

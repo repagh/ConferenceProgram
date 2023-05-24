@@ -221,7 +221,7 @@ class Event:
 
     def printDay(self):
         return self.day.strftime("%a")
-    
+
     def printDayFull(self):
         return self.day.strftime("%A, %B %e")
 
@@ -470,7 +470,7 @@ class Program:
                     if common_authors:
                         ca = ' and '.join([str(a) for a in common_authors])
                         print(f"Authors for events {s1[0]} and {s2[0]}",
-                              f" overlap\n common authors: {ca}", 
+                              f" overlap\n common authors: {ca}",
                               file=sys.stderr)
 
 
