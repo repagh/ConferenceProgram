@@ -45,7 +45,11 @@ class Item:
             else:
                 v = None
             setattr(self, m, v)
-
+        
+        # formats?
+        if self.requested_format:
+            self.requested_format = list(map(
+                str.strip, self.requested_format.split(',')))
         # an item may be presented in multiple sessions, for example the
         # best student paper candidates
         self.session = self.session.split(',')
@@ -91,6 +95,13 @@ class Item:
         for a in self.authors:
             res.append(f"{a.firstname} {a.lastname}")
         return ', '.join(res)
+    
+    def isRemote(self):
+        if self.requested_format is not None and \
+            'Zoom' in self.requested_format:
+            print(f"Remote session for {self.title}")
+            return True
+        return False
 
     def getFieldDetails(self):
         return dict(
@@ -113,6 +124,7 @@ class Item:
                                     for s in self._session]),
             authors=self.printAuthors(),
             poster=('POSTER' in [s.session for s in self._session]),
+            remote=('Zoom' in self.requested_format),
             chair=[dict(name=s.chair,
                         email=s.chair_email,
                         session=s._event._session.title)

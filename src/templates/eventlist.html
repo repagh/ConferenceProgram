@@ -61,7 +61,10 @@
             {% for item in event._session._items %}
             <div class="item">
               <div class="title">
-                {{ item.title }}
+                {{ item.title }} 
+                {% if item.isRemote() %}
+                <b>(Zoom)</b>
+                {% endif %}
               </div>
               <div class="authors">
                 {{ item.printAuthors() }}
