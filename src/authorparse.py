@@ -91,7 +91,7 @@ author = (lastcaps + firstname + Opt(titlepost)) | \
     (Opt(titlepre) + (initials | firstname) + lastname + Opt(titlepost))
 
 
-separator = Literal(',') | Literal('&') | Literal('\n')
+separator = Literal(',') | Literal('&') | Literal('\n') | Literal(';')
 
 author_line = (author + Opt(Literal(',') +
                Regex(r'[^\n]*').set_parse_action(setAffiliation))

@@ -382,12 +382,13 @@ ProgramSheet.args(subparsers)
 # default arguments
 argvdef = (
     '--title="The Nonsense Conference"',
-    f'--program={base}/../example/exampledata.xlsx',
-    'email',
-    '--outfile=Nonsense.mbox',
-    '--email=M.M.vanPaassen@TUDelft.nl',
-    '--testmail=rene_vanpaassen@yahoo.com'
+    f'--program=/home/repa/Downloads/ISAP 2025(2).ods',
+    'pdf',
+    '--outfile=/tmp/Nonsense.pdf',
+    '--authorout=/tmp/Authors.pdf'
 )
+
+
 
 
 if __name__ == '__main__':
