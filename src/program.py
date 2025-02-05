@@ -25,7 +25,7 @@ class Item:
 
     _members = ('item', 'title', 'abstract', 'email', 'corresponding',
                 'session', 'presenter', 'requested_format')
-    _required = ('author_list', 'item', 'title', 'email', 'corresponding',
+    _required = ('item', 'title', 'corresponding',
                  'session')
 
     def __init__(self, row, data, program):
@@ -38,14 +38,21 @@ class Item:
 
         # these are directly coupled, make empty string cells void
         for m in Item._members:
-            if isinstance(data[m], str) and data[m].strip() == '':
-                v = None
-            elif data[m] is not None:
-                v = str(data[m])
-            else:
+            try:
+                if isinstance(data[m], str) and data[m].strip() == '':
+                    v = None
+                elif data[m] is not None:
+                    v = str(data[m])
+                else:
+                    v = None
+            except KeyError:
                 v = None
             setattr(self, m, v)
-        
+
+        # author_list may be empty if corresponding is filled
+        if data['author_list'] is None or not str(data['author_list']).strip():
+            data['author_list'] = data['corresponding']
+
         # formats?
         if self.requested_format:
             self.requested_format = list(map(
@@ -71,7 +78,7 @@ class Item:
         try:
             self.authors = list(AuthorList(data['author_list'], program))
         except Exception:
-            print(f"Cannot get authors from author_list in row {row}")
+            print(f"Cannot get authors from author_list '{data['author_list']}'in row {row}")
             self.authors = [Author(dict(firstname='', lastname='Anonymous'),
                                    program)]
 
@@ -95,7 +102,7 @@ class Item:
         for a in self.authors:
             res.append(f"{a.firstname} {a.lastname}")
         return ', '.join(res)
-    
+
     def isRemote(self):
         if self.requested_format is not None and \
             'Zoom' in self.requested_format:
@@ -286,9 +293,9 @@ class Event:
 
     def printTitle(self):
         try:
-            return self._session.title
+            return self._session.title or ''
         except AttributeError:
-            return self.title
+            return self.title or ''
 
 
 class Session:

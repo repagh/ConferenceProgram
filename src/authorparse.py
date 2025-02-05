@@ -88,10 +88,11 @@ lastcaps = Word(alphas.upper(), min=2,
                 asKeyword=True).set_parse_action(setLastCap)
 
 author = (lastcaps + firstname + Opt(titlepost)) | \
-    (Opt(titlepre) + (initials | firstname) + lastname + Opt(titlepost))
+    (Opt(titlepre) + (initials | firstname) + lastname + Opt(titlepost)) | \
+        (lastname + Literal(',') + firstname)
 
 
-separator = Literal(',') | Literal('&') | Literal('\n') | Literal(';')
+separator = Literal('&') | Literal('\n') | Literal(';')
 
 author_line = (author + Opt(Literal(',') +
                Regex(r'[^\n]*').set_parse_action(setAffiliation))
