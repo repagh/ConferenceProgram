@@ -321,6 +321,12 @@ class Session:
                 f"Cannot find event {self.event} for session {self.session}"
                 f", check event in row {row}")
         self._items = []
+        self.program = program
+
+        if self.chair:
+            self.chairs = list(AuthorList(data['chair'], program))
+            for c in self.chairs:
+                c.addChairRole(self._event)
 
     def __str__(self):
         return str(self.__dict__)
@@ -328,8 +334,11 @@ class Session:
     def key(self):
         return self.session
 
-    def allAuthors(self):
-        res = set()
+    def allAuthors(self, withChair=True):
+        if self.chair:
+            res = set(AuthorList(self.chair, self.program))
+        else:
+            res = set()
         for i in self._items:
             res |= set(i.authors)
         return res

@@ -162,8 +162,12 @@ class Author:
         obj.firstname = firstname
         obj.orcid = orcid
         obj._items = []
+        obj._chairing = []
         program.authors[obj.key()] = obj
         return obj
+
+    def addChairRole(self, event):
+        self._chairing.append(event)
 
     @classmethod
     def _from_dict(cls, data, program):
@@ -233,6 +237,8 @@ class Author:
         res = []
         for it in self._items:
             res.extend(it.getEvents())
+        for ch in self._chairing:
+            res.extend((f"{ch.event} (chair)",))
         return sorted(res, key=daysort)
 
 

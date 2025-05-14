@@ -82,6 +82,3 @@ if __name__ == '__main__':
 
     base = os.path.dirname(__file__)
     b1 = BookOfSheets(f'{base}/../example/exampledata.xlsx')
-    sheet_id = '1bfvtA3tBdtqd_M8TpKA1pY_vuov1SiMdtywJ8G20lw0'
-    b2 = BookOfSheets(
-        f'https://docs.google.com/spreadsheets/d/{sheet_id}/edit?usp=sharing')
